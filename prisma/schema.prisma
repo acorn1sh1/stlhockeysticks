@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Monthly Alibaba order cycle
+model Batch {
+  id           String   @id @default(cuid())
+  name         String // e.g. "August 2026 Batch"
+  cutoffDate   DateTime // last day to pre-order into this batch
+  pickupStart  DateTime // estimated pickup window
+  pickupEnd    DateTime
+  status       BatchStatus @default(OPEN)
+  orders       Order[]
+  createdAt    DateTime @default(now())
+}
+
+enum BatchStatus {
+  OPEN      // taking pre-orders
+  ORDERED   // placed with supplier
+  ARRIVED   // ready for pickup
+  CLOSED
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  category    Category
+  priceCents  Int
+  imageUrl    String?
+  clubName    String? // for club-customized mini sticks
+  inStock     Int      @default(0) // on-hand inventory
+  preorder    Boolean  @default(true) // allow pre-order into next batch
+  active      Boolean  @default(true)
+  orderItems  OrderItem[]
+  createdAt   DateTime @default(now())
+}
+
+enum Category {
+  FULL_STICK
+  GOALIE
+  MINI_CLUB
+  MINI_FUN
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  email         String
+  name          String
+  phone         String?
+  clerkUserId   String? // set when logged in; guest checkout leaves null
+  batchId       String? // null = fulfilled from stock
+  batch         Batch?   @relation(fields: [batchId], references: [id])
+  items         OrderItem[]
+  subtotalCents Int
+  status        OrderStatus @default(PENDING_PAYMENT)
+  cloverCheckoutId String? @unique
+  cloverPaymentId  String?
+  pickedUpAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  READY_FOR_PICKUP
+  PICKED_UP
+  CANCELLED
+  REFUNDED
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  quantity   Int
+  priceCents Int // unit price at purchase time (incl. option upcharges)
+  options    Json? // { flex, curve, hand, color, customName }
+}
+
+model ClubInquiry {
+  id        String   @id @default(cuid())
+  clubName  String
+  contact   String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}

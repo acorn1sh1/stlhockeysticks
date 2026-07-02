@@ -1,0 +1,120 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  fmtPrice,
+  unitPriceCents,
+  type CatalogItem,
+  type SelectedOptions,
+} from "@/lib/catalog";
+import { useCart } from "@/lib/cart";
+
+function OptionRow<T extends string | number>({
+  label,
+  values,
+  selected,
+  onSelect,
+  hint,
+}: {
+  label: string;
+  values: T[];
+  selected: T;
+  onSelect: (v: T) => void;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <span className="font-bold">{label}</span>
+        {hint && <span className="text-xs text-black/40">{hint}</span>}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {values.map((v) => (
+          <button
+            key={String(v)}
+            onClick={() => onSelect(v)}
+            className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${
+              selected === v
+                ? "border-ink bg-ink text-paper"
+                : "border-black/20 bg-white hover:border-ink"
+            }`}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function Configurator({ item }: { item: CatalogItem }) {
+  const { add } = useCart();
+  const o = item.options!;
+  const [flex, setFlex] = useState(o.flex[Math.floor(o.flex.length / 2)]);
+  const [curve, setCurve] = useState(o.curve[0]);
+  const [hand, setHand] = useState(o.hand[0]);
+  const [color, setColor] = useState(o.colors[0]);
+  const [customName, setCustomName] = useState("");
+  const [added, setAdded] = useState(false);
+
+  const sel: SelectedOptions = useMemo(
+    () => ({
+      flex: String(flex),
+      curve,
+      hand,
+      color,
+      customName: customName.trim() || undefined,
+    }),
+    [flex, curve, hand, color, customName]
+  );
+
+  const price = unitPriceCents(item, sel);
+
+  const onAdd = () => {
+    add(item, sel);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
+
+  return (
+    <div className="space-y-6">
+      <OptionRow label="Flex" values={o.flex} selected={flex} onSelect={setFlex} hint="Rule of thumb: half your body weight (lbs)" />
+      <OptionRow label="Curve" values={o.curve} selected={curve} onSelect={setCurve} hint={o.curve.length > 1 ? "P92 = most popular all-rounder" : undefined} />
+      <OptionRow label="Hand" values={o.hand} selected={hand} onSelect={setHand} />
+      <OptionRow
+        label="Color"
+        values={o.colors}
+        selected={color}
+        onSelect={setColor}
+        hint={`${o.colors[0]} standard · others +${fmtPrice(o.colorUpchargeCents)}`}
+      />
+      <div>
+        <div className="flex items-baseline justify-between">
+          <span className="font-bold">Name on shaft (optional)</span>
+          <span className="text-xs text-black/40">+{fmtPrice(o.nameUpchargeCents)} · max 20 chars</span>
+        </div>
+        <input
+          value={customName}
+          onChange={(e) => setCustomName(e.target.value.slice(0, 20))}
+          placeholder="e.g. GRETZKY 99"
+          className="mt-2 w-full rounded-lg border border-black/20 px-3 py-2 font-semibold uppercase tracking-wide"
+        />
+      </div>
+
+      <div className="flex items-center justify-between border-t border-black/10 pt-5">
+        <div>
+          <div className="text-3xl font-black">{fmtPrice(price)}</div>
+          <div className="text-xs text-black/50">Local STL pickup · no shipping</div>
+        </div>
+        <button
+          onClick={onAdd}
+          className={`rounded-full px-8 py-3 font-bold transition ${
+            added ? "bg-volt text-ink" : "bg-ink text-paper hover:bg-ink/80"
+          }`}
+        >
+          {added ? "Added to Cart ✓" : "Add to Cart"}
+        </button>
+      </div>
+    </div>
+  );
+}
