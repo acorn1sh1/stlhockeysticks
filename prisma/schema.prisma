@@ -59,10 +59,12 @@ model Order {
   batch         Batch?   @relation(fields: [batchId], references: [id])
   items         OrderItem[]
   subtotalCents Int
+  discountCents Int      @default(0) // club bulk "donation back" discount already netted into subtotalCents
   status        OrderStatus @default(PENDING_PAYMENT)
   cloverCheckoutId String? @unique
   cloverPaymentId  String?
   pickedUpAt    DateTime?
+  warrantyClaims WarrantyClaim[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -94,4 +96,41 @@ model ClubInquiry {
   email     String
   message   String
   createdAt DateTime @default(now())
+}
+
+// Broken-stick warranty claim. Window: 30 days from purchase.
+// Must be filed online with photos + order reference.
+model WarrantyClaim {
+  id          String   @id @default(cuid())
+  orderId     String // verified against Order.id at submit time
+  order       Order    @relation(fields: [orderId], references: [id])
+  email       String // must match the order's email
+  name        String
+  phone       String?
+  productName String // which stick broke (free text / from order items)
+  description String // what went wrong
+  photos      WarrantyPhoto[]
+  status      WarrantyStatus @default(SUBMITTED)
+  adminNotes  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Base64-encoded image stored inline. Kept in its own table so the
+// (large) blobs don't get pulled on every claim list query.
+model WarrantyPhoto {
+  id        String   @id @default(cuid())
+  claimId   String
+  claim     WarrantyClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  mimeType  String
+  dataBase64 String // raw base64 (no data: prefix)
+  createdAt DateTime @default(now())
+}
+
+enum WarrantyStatus {
+  SUBMITTED
+  APPROVED
+  DENIED
+  REPLACED
+  REFUNDED
 }

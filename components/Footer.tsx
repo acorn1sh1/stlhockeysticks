@@ -23,6 +23,7 @@ export default function Footer() {
             <li><Link href="/mini-sticks" className="hover:text-volt">Mini Sticks</Link></li>
             <li><Link href="/clubs" className="hover:text-volt">Club Custom Program</Link></li>
             <li><Link href="/how-it-works" className="hover:text-volt">How It Works</Link></li>
+            <li><Link href="/warranty" className="hover:text-volt">Warranty Claim</Link></li>
           </ul>
         </div>
         <div className="text-sm">

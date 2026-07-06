@@ -15,10 +15,11 @@ const art: Record<CatalogItem["category"], string> = {
 export default function ProductCard({ item }: { item: CatalogItem }) {
   const { add } = useCart();
   const [added, setAdded] = useState(false);
+  const [qty, setQty] = useState(1);
   const configurable = !!item.options;
 
   const onAdd = () => {
-    add(item);
+    add(item, undefined, item.inStock ? qty : 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1200);
   };
@@ -55,7 +56,7 @@ export default function ProductCard({ item }: { item: CatalogItem }) {
             ))}
           </div>
         )}
-        <div className="mt-4 flex flex-1 items-end justify-between">
+        <div className="mt-4 flex flex-1 items-end justify-between gap-2">
           <span className="text-xl font-black">{fmtPrice(item.priceCents)}</span>
           {configurable ? (
             <Link
@@ -65,14 +66,35 @@ export default function ProductCard({ item }: { item: CatalogItem }) {
               Customize →
             </Link>
           ) : (
-            <button
-              onClick={onAdd}
-              className={`rounded-full px-5 py-2 text-sm font-bold transition ${
-                added ? "bg-volt text-ink" : "bg-ink text-paper hover:bg-ink/80"
-              }`}
-            >
-              {added ? "Added ✓" : "Add to Cart"}
-            </button>
+            <div className="flex items-center gap-2">
+              {item.inStock && (
+                <div className="flex items-center gap-1">
+                  <button
+                    aria-label="Decrease quantity"
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    className="h-8 w-8 shrink-0 rounded-full border border-black/20 font-bold hover:bg-black/5"
+                  >
+                    −
+                  </button>
+                  <span className="w-5 text-center font-bold">{qty}</span>
+                  <button
+                    aria-label="Increase quantity"
+                    onClick={() => setQty((q) => q + 1)}
+                    className="h-8 w-8 shrink-0 rounded-full border border-black/20 font-bold hover:bg-black/5"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={onAdd}
+                className={`shrink-0 rounded-full px-5 py-2 text-sm font-bold transition ${
+                  added ? "bg-volt text-ink" : "bg-ink text-paper hover:bg-ink/80"
+                }`}
+              >
+                {added ? "Added ✓" : "Add to Cart"}
+              </button>
+            </div>
           )}
         </div>
       </div>

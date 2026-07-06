@@ -8,6 +8,7 @@ export type StickOptions = {
   colors: string[]; // first = standard (no upcharge)
   colorUpchargeCents: number;
   nameUpchargeCents: number; // custom name printing on shaft
+  paddleSize?: string[]; // goalie only
 };
 
 export type CatalogItem = {
@@ -19,6 +20,9 @@ export type CatalogItem = {
   badge?: string;
   specs?: string[];
   options?: StickOptions;
+  // Catalog-level "ships now, no batch wait" flag. Distinct from Prisma's
+  // Product.inStock (on-hand unit count) — this is a display/grouping flag.
+  inStock?: boolean;
 };
 
 export const COLORS = [
@@ -36,6 +40,12 @@ export const COLORS = [
 const CURVES_FULL = ["P92", "P28", "P88", "P92M", "PM9", "P02", "P90TM", "P91A"];
 const CURVES_YOUTH = ["P92", "P28"];
 const HANDS = ["Right", "Left"];
+const PADDLE_SIZES = ['24"', '26"', '28"', '30"'];
+
+const FLEX_SENIOR = [65, 70, 75, 80, 85, 90, 95, 102];
+const FLEX_INT = [45, 50, 55, 60, 65];
+const FLEX_JR = [35, 40, 45, 50, 55];
+const FLEX_YTH = [20, 25, 30, 35];
 
 const baseOpts = {
   colors: COLORS,
@@ -45,123 +55,244 @@ const baseOpts = {
 };
 
 export const CATALOG: CatalogItem[] = [
+  // ---- SENIOR: Elite / Performance / Value ----
   {
     slug: "elite-senior-stick",
     name: "Elite Senior Stick",
     description:
-      "Our lightest build — 315g of T1100 carbon with boron fiber and 24K weave. The stick that keeps up with your hands.",
+      "Our lightest twig — 315g of T1100 carbon, boron fiber, and a 24K weave that doesn't quit. Beauty mitts not required; this stick makes you look better than you are.",
     category: "FULL_STICK",
     priceCents: 11900,
     badge: "Top Shelf",
     specs: ["315g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick"],
-    options: {
-      ...baseOpts,
-      flex: [65, 70, 75, 80, 85, 90, 95, 102],
-      curve: CURVES_FULL,
-    },
+    options: { ...baseOpts, flex: FLEX_SENIOR, curve: CURVES_FULL },
   },
   {
     slug: "performance-senior-stick",
     name: "Performance Senior Stick",
     description:
-      "350g full-carbon workhorse with 18K weave. Pro-shop feel at a beer-league price. Our most popular stick.",
+      "350g full-carbon workhorse with 18K weave. Pro-shop feel at a beer-league price — the most popular blade in the room, bar down ready right out of the wrapper.",
     category: "FULL_STICK",
     priceCents: 9900,
     badge: "Best Seller",
     specs: ["350g", "T1100/T800 carbon", "18K weave", "Mid kick"],
-    options: {
-      ...baseOpts,
-      flex: [65, 70, 75, 80, 85, 90, 95, 102],
-      curve: CURVES_FULL,
-    },
+    options: { ...baseOpts, flex: FLEX_SENIOR, curve: CURVES_FULL },
   },
   {
     slug: "value-senior-stick",
     name: "Value Senior Stick",
     description:
-      "425g full-carbon build. A little more heft, a lot less money. Perfect backup or first composite.",
+      "425g full-carbon build. A little more heft, a lot less money — the perfect backup twig or your first real composite. Bender-proof flex, no shame in the tank.",
     category: "FULL_STICK",
     priceCents: 7900,
     badge: "Best Value",
     specs: ["425g", "T700 carbon", "18K weave", "Mid kick"],
-    options: {
-      ...baseOpts,
-      flex: [65, 70, 75, 80, 85, 90, 95, 102],
-      curve: CURVES_FULL,
-    },
+    options: { ...baseOpts, flex: FLEX_SENIOR, curve: CURVES_FULL },
+  },
+
+  // ---- INTERMEDIATE: Elite / Performance / Value ----
+  {
+    slug: "elite-intermediate-stick",
+    name: "Elite Intermediate Stick",
+    description:
+      "Same 315g T1100-plus-boron build as our Elite Senior, sized down for players stepping up. Bender-proof flex, bar-down-ready blade — your shelves called, they want a beauty.",
+    category: "FULL_STICK",
+    priceCents: 10900,
+    badge: "Top Shelf",
+    specs: ["315g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick", "INT sizing"],
+    options: { ...baseOpts, flex: FLEX_INT, curve: CURVES_FULL },
   },
   {
-    slug: "intermediate-stick",
-    name: "Intermediate Stick",
+    slug: "performance-intermediate-stick",
+    name: "Performance Intermediate Stick",
     description:
-      "315g full-carbon INT build for players stepping up. Same construction as our senior Elite, sized down.",
+      "335g full-carbon INT stick built for growing shots and Saturday-morning cellys. The workhorse pick for the jump to full-size ice.",
     category: "FULL_STICK",
     priceCents: 8900,
-    specs: ["315g", "Full carbon", "24K weave", "INT sizing"],
-    options: {
-      ...baseOpts,
-      flex: [45, 50, 55, 60, 65],
-      curve: CURVES_FULL,
-    },
+    badge: "Best Seller",
+    specs: ["335g", "T1100/T800 carbon", "18K weave", "Mid kick", "INT sizing"],
+    options: { ...baseOpts, flex: FLEX_INT, curve: CURVES_FULL },
   },
   {
-    slug: "junior-stick",
-    name: "Junior Stick",
+    slug: "value-intermediate-stick",
+    name: "Value Intermediate Stick",
     description:
-      "295g full-carbon JR stick. Light enough for developing shots, tough enough for driveway abuse.",
+      "370g full-carbon INT build. Budget twig, zero excuses — takes the abuse of stepping-up season without taking your allowance.",
     category: "FULL_STICK",
     priceCents: 6900,
-    specs: ["295g", "Full carbon", "24K weave", "JR sizing"],
-    options: {
-      ...baseOpts,
-      flex: [35, 40, 45, 50, 55],
-      curve: CURVES_YOUTH,
-    },
+    badge: "Best Value",
+    specs: ["370g", "T700 carbon", "18K weave", "Mid kick", "INT sizing"],
+    options: { ...baseOpts, flex: FLEX_INT, curve: CURVES_FULL },
+  },
+
+  // ---- JUNIOR: Elite / Performance / Value ----
+  {
+    slug: "elite-junior-stick",
+    name: "Elite Junior Stick",
+    description:
+      "295g full-carbon JR build, same 24K weave as the big leagues. Light enough for developing snipes, tough enough for driveway abuse.",
+    category: "FULL_STICK",
+    priceCents: 8900,
+    badge: "Top Shelf",
+    specs: ["295g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick", "JR sizing"],
+    options: { ...baseOpts, flex: FLEX_JR, curve: CURVES_YOUTH },
   },
   {
-    slug: "youth-stick",
-    name: "Youth Stick",
+    slug: "performance-junior-stick",
+    name: "Performance Junior Stick",
     description:
-      "Feather-light full-carbon youth stick. Real construction, kid-sized flex — not a toy-store special.",
+      "315g full-carbon JR workhorse. The stick that survives basement one-timers and actual games — celly-worthy the day it comes out of the batch.",
+    category: "FULL_STICK",
+    priceCents: 6900,
+    badge: "Best Seller",
+    specs: ["315g", "T1100/T800 carbon", "18K weave", "Mid kick", "JR sizing"],
+    options: { ...baseOpts, flex: FLEX_JR, curve: CURVES_YOUTH },
+  },
+  {
+    slug: "value-junior-stick",
+    name: "Value Junior Stick",
+    description:
+      "345g full-carbon JR build. Solid backup twig so the good one stays in the bag until game day.",
+    category: "FULL_STICK",
+    priceCents: 4900,
+    badge: "Best Value",
+    specs: ["345g", "T700 carbon", "18K weave", "Mid kick", "JR sizing"],
+    options: { ...baseOpts, flex: FLEX_JR, curve: CURVES_YOUTH },
+  },
+
+  // ---- YOUTH: Elite / Performance / Value ----
+  {
+    slug: "elite-youth-stick",
+    name: "Elite Youth Stick",
+    description:
+      "215g feather-light full-carbon build. Real construction, kid-sized flex — not a toy-store special.",
+    category: "FULL_STICK",
+    priceCents: 7900,
+    badge: "Top Shelf",
+    specs: ["215g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick", "YTH sizing"],
+    options: { ...baseOpts, flex: FLEX_YTH, curve: CURVES_YOUTH },
+  },
+  {
+    slug: "performance-youth-stick",
+    name: "Performance Youth Stick",
+    description:
+      "245g full-carbon YTH stick. Built to keep up with a kid who just discovered they can actually shoot.",
     category: "FULL_STICK",
     priceCents: 5900,
-    specs: ["215–275g", "Full carbon", "24K weave", "YTH sizing"],
-    options: {
-      ...baseOpts,
-      flex: [20, 25, 30, 35],
-      curve: CURVES_YOUTH,
-    },
+    badge: "Best Seller",
+    specs: ["245g", "T1100/T800 carbon", "18K weave", "Mid kick", "YTH sizing"],
+    options: { ...baseOpts, flex: FLEX_YTH, curve: CURVES_YOUTH },
   },
   {
-    slug: "goalie-stick",
-    name: "Goalie Stick",
+    slug: "value-youth-stick",
+    name: "Value Youth Stick",
     description:
-      "Full-carbon goal stick, 31-L paddle. Because goalies deserve wholesale prices too.",
+      "275g full-carbon YTH build. Tough enough for driveway hockey, priced so losing it in the yard doesn't hurt.",
+    category: "FULL_STICK",
+    priceCents: 3900,
+    badge: "Best Value",
+    specs: ["275g", "T700 carbon", "18K weave", "Mid kick", "YTH sizing"],
+    options: { ...baseOpts, flex: FLEX_YTH, curve: CURVES_YOUTH },
+  },
+
+  // ---- GOALIE: Elite / Performance / Value ----
+  {
+    slug: "elite-goalie-stick",
+    name: "Elite Goalie Stick",
+    description:
+      "450g full-carbon paddle, the lightest build we stock. Your glove hand called — it wants this stick.",
+    category: "GOALIE",
+    priceCents: 14900,
+    badge: "Top Shelf",
+    specs: ["450g", "T1100 + boron carbon", "24K weave", "24\"-30\" paddle"],
+    options: { ...baseOpts, flex: FLEX_SENIOR, curve: ["31-L"], paddleSize: PADDLE_SIZES },
+  },
+  {
+    slug: "performance-goalie-stick",
+    name: "Performance Goalie Stick",
+    description:
+      "480g full-carbon workhorse paddle. Because goalies deserve wholesale prices too — bar down still counts even if you're the one letting it in.",
     category: "GOALIE",
     priceCents: 12900,
-    specs: ["Full carbon", "31-L paddle", "18K weave"],
-    options: {
-      ...baseOpts,
-      flex: [65, 70, 75, 80, 85, 90, 95, 102],
-      curve: ["31-L"],
-    },
+    badge: "Best Seller",
+    specs: ["480g", "T1100/T800 carbon", "18K weave", "24\"-30\" paddle"],
+    options: { ...baseOpts, flex: FLEX_SENIOR, curve: ["31-L"], paddleSize: PADDLE_SIZES },
   },
+  {
+    slug: "value-goalie-stick",
+    name: "Value Goalie Stick",
+    description:
+      "520g full-carbon paddle. Backup between the pipes shouldn't cost like a starter.",
+    category: "GOALIE",
+    priceCents: 10900,
+    badge: "Best Value",
+    specs: ["520g", "T700 carbon", "18K weave", "24\"-30\" paddle"],
+    options: { ...baseOpts, flex: FLEX_SENIOR, curve: ["31-L"], paddleSize: PADDLE_SIZES },
+  },
+
+  // ---- IN STOCK: fixed flex+curve combos, ships now, no batch wait ----
+  {
+    slug: "instock-senior-85-p92",
+    name: "In-Stock Senior — 85 Flex / P92",
+    description:
+      "Grab-and-go senior twig, 85 flex, P92 curve, built and sitting on the shelf. No batch, no wait — walk in, walk out, go snipe.",
+    category: "FULL_STICK",
+    priceCents: 9900,
+    badge: "Ships Now",
+    specs: ["350g", "18K weave", "85 Flex", "P92 curve", "Right hand"],
+    inStock: true,
+  },
+  {
+    slug: "instock-senior-75-p28",
+    name: "In-Stock Senior — 75 Flex / P28",
+    description:
+      "Same deal, softer flex, P28 curve. Ready on the shelf right now for the whippy-shot crowd.",
+    category: "FULL_STICK",
+    priceCents: 9900,
+    badge: "Ships Now",
+    specs: ["350g", "18K weave", "75 Flex", "P28 curve", "Right hand"],
+    inStock: true,
+  },
+  {
+    slug: "instock-junior-50-p92",
+    name: "In-Stock Junior — 50 Flex / P92",
+    description:
+      "The most popular junior combo, sitting on the shelf today. No pre-order needed, no cutoff to watch.",
+    category: "FULL_STICK",
+    priceCents: 6900,
+    badge: "Ships Now",
+    specs: ["315g", "18K weave", "50 Flex", "P92 curve", "Right hand"],
+    inStock: true,
+  },
+  {
+    slug: "instock-goalie-26-paddle",
+    name: 'In-Stock Goalie — 26" Paddle',
+    description:
+      "Full-carbon goalie paddle, 26\", ready now. No monthly batch — just show up and steal a game.",
+    category: "GOALIE",
+    priceCents: 12900,
+    badge: "Ships Now",
+    specs: ["480g", "18K weave", '26" paddle', "Right hand"],
+    inStock: true,
+  },
+
+  // ---- MINI STICKS ----
   {
     slug: "club-custom-mini-stick",
     name: "Club Custom Mini Stick",
     description:
-      "Your club's colors and logo on an 18\" knee-hockey legend. Rally your team.",
+      "Your club's colors and logo on an 18\" knee-hockey legend. Rally your team, one basement celly at a time.",
     category: "MINI_CLUB",
-    priceCents: 1999,
+    priceCents: 2799,
     badge: "Club Favorite",
   },
   {
     slug: "fun-series-mini-stick",
     name: "Fun Series Mini Stick",
     description:
-      "Wild graphics, loud colors. The basement-hockey classic kids fight over.",
+      "Wild graphics, loud colors — the basement-hockey classic kids fight over before the tape's even on.",
     category: "MINI_FUN",
-    priceCents: 1499,
+    priceCents: 2799,
   },
 ];
 
@@ -173,6 +304,7 @@ export type SelectedOptions = {
   hand?: string;
   color?: string;
   customName?: string;
+  paddleSize?: string;
 };
 
 // Shared pricing logic — used by client preview AND server checkout.
@@ -191,13 +323,15 @@ export function validateOptions(
   item: CatalogItem,
   sel: SelectedOptions | undefined
 ): string | null {
-  if (!item.options) return null; // minis: no options
+  if (!item.options) return null; // minis + in-stock items: no configurable options
   if (!sel) return "Missing options";
   const o = item.options;
   if (!sel.flex || !o.flex.includes(Number(sel.flex))) return "Invalid flex";
   if (!sel.curve || !o.curve.includes(sel.curve)) return "Invalid curve";
   if (!sel.hand || !o.hand.includes(sel.hand)) return "Invalid hand";
   if (sel.color && !o.colors.includes(sel.color)) return "Invalid color";
+  if (o.paddleSize && (!sel.paddleSize || !o.paddleSize.includes(sel.paddleSize)))
+    return "Invalid paddle size";
   if (sel.customName && sel.customName.length > 20)
     return "Name too long (max 20 chars)";
   return null;
@@ -209,6 +343,7 @@ export function optionsSummary(sel?: SelectedOptions) {
     sel.flex && `${sel.flex} flex`,
     sel.curve,
     sel.hand,
+    sel.paddleSize && `${sel.paddleSize} paddle`,
     sel.color && sel.color !== "Black" ? sel.color : null,
     sel.customName?.trim() ? `"${sel.customName.trim()}"` : null,
   ].filter(Boolean);
@@ -216,13 +351,32 @@ export function optionsSummary(sel?: SelectedOptions) {
 }
 
 // Monthly batch logic (display only — real batches live in DB)
+// Cutoff is always the 1st of next month. Manufacturing + shipping runs
+// ~5-6 weeks from cutoff, so pickup is estimated 35-42 days after cutoff.
 export function nextBatch() {
   const now = new Date();
   const cutoff = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const pickupStart = new Date(now.getFullYear(), now.getMonth() + 1, 14);
+  const pickupStart = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate() + 35);
+  const pickupEnd = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate() + 42);
   const daysLeft = Math.max(
     0,
     Math.ceil((cutoff.getTime() - now.getTime()) / 86400000)
   );
-  return { cutoff, pickupStart, daysLeft };
+  return { cutoff, pickupStart, pickupEnd, daysLeft };
+}
+
+// Club bulk incentive: 10% donated back to the team once a club order
+// (by the club-custom mini stick) passes 20 sticks.
+export const CLUB_STICK_SLUG = "club-custom-mini-stick";
+export const CLUB_DISCOUNT_THRESHOLD = 20;
+export const CLUB_DISCOUNT_RATE = 0.1;
+
+export function clubDiscountCents(
+  lines: { slug: string; quantity: number; priceCents: number }[]
+) {
+  const clubLines = lines.filter((l) => l.slug === CLUB_STICK_SLUG);
+  const qty = clubLines.reduce((n, l) => n + l.quantity, 0);
+  if (qty <= CLUB_DISCOUNT_THRESHOLD) return 0;
+  const clubSubtotal = clubLines.reduce((n, l) => n + l.priceCents * l.quantity, 0);
+  return Math.round(clubSubtotal * CLUB_DISCOUNT_RATE);
 }

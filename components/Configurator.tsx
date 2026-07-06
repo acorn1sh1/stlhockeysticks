@@ -55,6 +55,9 @@ export default function Configurator({ item }: { item: CatalogItem }) {
   const [hand, setHand] = useState(o.hand[0]);
   const [color, setColor] = useState(o.colors[0]);
   const [customName, setCustomName] = useState("");
+  const [paddleSize, setPaddleSize] = useState(
+    o.paddleSize?.[Math.floor(o.paddleSize.length / 2)]
+  );
   const [added, setAdded] = useState(false);
 
   const sel: SelectedOptions = useMemo(
@@ -64,8 +67,9 @@ export default function Configurator({ item }: { item: CatalogItem }) {
       hand,
       color,
       customName: customName.trim() || undefined,
+      paddleSize: o.paddleSize ? paddleSize : undefined,
     }),
-    [flex, curve, hand, color, customName]
+    [flex, curve, hand, color, customName, paddleSize, o.paddleSize]
   );
 
   const price = unitPriceCents(item, sel);
@@ -81,6 +85,14 @@ export default function Configurator({ item }: { item: CatalogItem }) {
       <OptionRow label="Flex" values={o.flex} selected={flex} onSelect={setFlex} hint="Rule of thumb: half your body weight (lbs)" />
       <OptionRow label="Curve" values={o.curve} selected={curve} onSelect={setCurve} hint={o.curve.length > 1 ? "P92 = most popular all-rounder" : undefined} />
       <OptionRow label="Hand" values={o.hand} selected={hand} onSelect={setHand} />
+      {o.paddleSize && paddleSize && (
+        <OptionRow
+          label="Paddle Size"
+          values={o.paddleSize}
+          selected={paddleSize}
+          onSelect={setPaddleSize}
+        />
+      )}
       <OptionRow
         label="Color"
         values={o.colors}

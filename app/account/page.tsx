@@ -74,6 +74,7 @@ export default async function AccountPage() {
             <div className="mt-3 flex items-center justify-between text-sm">
               <span className="text-black/50">
                 {o.batch ? `Batch: ${o.batch.name}` : "Fulfilled from stock"}
+                {o.discountCents > 0 && " · 10% team donation applied"}
               </span>
               <span className="font-black">{fmtPrice(o.subtotalCents)}</span>
             </div>

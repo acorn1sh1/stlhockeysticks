@@ -57,9 +57,9 @@ export default async function StickDetail({
               </ul>
             )}
             <div className="mt-6 rounded-xl bg-volt/20 p-4 text-sm">
-              <strong>Batch pre-order.</strong> Custom sticks are built into the
-              monthly factory order — lock yours in before the cutoff and pick
-              up in STL when the batch lands.
+              <strong>Batch pre-order.</strong> Your build goes into the
+              monthly factory order — lock it in before the cutoff, then pick
+              up in STL when the batch lands. No shipping, no middleman markup.
             </div>
           </div>
           <div className="rounded-2xl border border-black/10 bg-white p-6">

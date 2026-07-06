@@ -11,19 +11,19 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "Why are your sticks cheaper?",
-    a: "Three reasons: we buy factory-direct in bulk, we don't run a retail storefront, and you pick up locally so nobody pays oversized-item shipping. Same composite construction, less overhead.",
+    a: "Three reasons: we buy factory-direct by the pallet, we don't run a retail storefront, and you pick up locally so nobody pays oversized-item shipping. Same T1100/T800 carbon construction, way less overhead.",
   },
   {
     q: "When do I get my sticks?",
-    a: "Pre-orders lock on the 1st of each month. The batch usually lands in St. Louis about two weeks later. We email you the moment your order is ready for pickup.",
+    a: "Pre-orders lock on the 1st of each month. The batch usually lands in St. Louis about 5-6 weeks later. We email you the second your order's ready for pickup. Need something sooner? Check the In Stock lineup — those ship with no batch wait.",
   },
   {
     q: "Where is pickup?",
     a: "St. Louis metro. The exact address and pickup window are emailed with your ready-for-pickup confirmation.",
   },
   {
-    q: "What if a stick is defective?",
-    a: "Bring it back at pickup or within 7 days and we'll swap it from batch stock or refund you. Simple.",
+    q: "What if a stick is defective or breaks?",
+    a: "Every stick is covered for 30 days from purchase. If one breaks or fails, file a claim on our Warranty page with your order number and a few photos of the damage — we'll swap it from batch stock or refund you. No hassle, no interrogation.",
   },
   {
     q: "Do I need an account?",
@@ -46,7 +46,7 @@ export default function HowItWorks() {
           {[
             ["Order online", "Add sticks to your cart and check out securely with Clover. In-stock items are ready now; pre-order items join the current monthly batch."],
             ["We place one big order", "On the 1st of each month, all pre-orders combine into a single bulk factory order. That volume is what gets you wholesale pricing."],
-            ["The batch lands in STL", "Roughly two weeks later, the shipment arrives. We inspect every stick before it goes out."],
+            ["The batch lands in STL", "Roughly 5-6 weeks later, the shipment arrives. We inspect every stick before it goes out."],
             ["You pick up locally", "We email your pickup window. Swing by, grab your sticks, save the shipping money."],
           ].map(([t, d], i) => (
             <li key={t} className="flex gap-4">

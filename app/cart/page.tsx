@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
-import { fmtPrice, nextBatch, optionsSummary } from "@/lib/catalog";
+import { clubDiscountCents, fmtPrice, nextBatch, optionsSummary } from "@/lib/catalog";
 
 export default function CartPage() {
   const { lines, setQty, remove, subtotalCents } = useCart();
+  const discountCents = clubDiscountCents(lines);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [state, setState] = useState<"idle" | "sending" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -137,6 +138,18 @@ export default function CartPage() {
             <span className="font-bold">Subtotal</span>
             <span className="font-black">{fmtPrice(subtotalCents)}</span>
           </div>
+          {discountCents > 0 && (
+            <div className="mt-1 flex justify-between text-sm font-semibold text-volt-dark">
+              <span>10% Team Donation Discount (20+ club sticks)</span>
+              <span>−{fmtPrice(discountCents)}</span>
+            </div>
+          )}
+          {discountCents > 0 && (
+            <div className="mt-1 flex justify-between text-lg">
+              <span className="font-bold">Total</span>
+              <span className="font-black">{fmtPrice(subtotalCents - discountCents)}</span>
+            </div>
+          )}
           <p className="mt-1 text-right text-xs text-black/50">
             Tax handled at payment. No shipping — ever.
           </p>

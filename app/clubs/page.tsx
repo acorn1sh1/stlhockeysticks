@@ -20,8 +20,12 @@ export default function ClubsPage() {
           </h1>
           <p className="mt-4 max-w-xl text-paper/70">
             We design and produce custom mini sticks for St. Louis area hockey
-            clubs — team colors, logo, the works. Kids love them, parents buy
-            them, clubs use them for fundraisers and end-of-season gifts.
+            clubs — team colors, logo, the works. Kids fight over them in the
+            locker room, parents buy them, clubs run them as fundraisers and
+            end-of-season gifts that actually get used.
+          </p>
+          <p className="mt-4 inline-block rounded-full bg-volt px-4 py-2 text-sm font-bold text-ink">
+            Order 20+ sticks and we donate 10% back to your team.
           </p>
         </div>
       </section>

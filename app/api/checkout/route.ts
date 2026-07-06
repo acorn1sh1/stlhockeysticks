@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createHostedCheckout } from "@/lib/clover";
+import { getOrCreateOpenBatch } from "@/lib/batch";
 import {
   CATALOG,
+  clubDiscountCents,
   optionsSummary,
   unitPriceCents,
   validateOptions,
@@ -68,19 +70,24 @@ export async function POST(req: Request) {
     });
   }
 
-  const subtotalCents = lines.reduce((n, l) => n + l.unitCents * l.quantity, 0);
+  const grossCents = lines.reduce((n, l) => n + l.unitCents * l.quantity, 0);
+  const discountCents = clubDiscountCents(
+    lines.map((l) => ({ slug: l.product.slug, quantity: l.quantity, priceCents: l.unitCents }))
+  );
+  const subtotalCents = grossCents - discountCents;
 
-  // Attach to open batch if any line can't be covered by on-hand stock
-  const openBatch = await prisma.batch.findFirst({ where: { status: "OPEN" } });
+  // Attach to the correct monthly batch if any line can't be covered by on-hand stock
   const needsBatch = lines.some((l) => l.product.inStock < l.quantity);
+  const openBatch = needsBatch ? await getOrCreateOpenBatch() : null;
 
   const order = await prisma.order.create({
     data: {
       email: body.email,
       name: body.name,
       phone: body.phone,
-      batchId: needsBatch ? openBatch?.id : null,
+      batchId: openBatch?.id ?? null,
       subtotalCents,
+      discountCents,
       items: {
         create: lines.map((l) => ({
           productId: l.product.id,
@@ -103,11 +110,16 @@ export async function POST(req: Request) {
         lastName: rest.join(" ") || undefined,
         phone: body.phone,
       },
-      lines: lines.map((l) => ({
-        name: l.label,
-        priceCents: l.unitCents,
-        quantity: l.quantity,
-      })),
+      lines: [
+        ...lines.map((l) => ({
+          name: l.label,
+          priceCents: l.unitCents,
+          quantity: l.quantity,
+        })),
+        ...(discountCents > 0
+          ? [{ name: "10% Team Donation Discount", priceCents: -discountCents, quantity: 1 }]
+          : []),
+      ],
       redirectUrls: {
         success: `${site}/checkout/success?order=${order.id}`,
         failure: `${site}/checkout/failed?order=${order.id}`,

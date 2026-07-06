@@ -35,7 +35,8 @@ export default function MiniSticksPage() {
           </h2>
           <p className="mt-2 max-w-xl text-paper/70">
             We design custom mini sticks for STL-area clubs. Team-priced bulk
-            orders, delivered with the monthly batch.
+            orders, delivered with the monthly batch. Order 20+ sticks and
+            we donate 10% back to your team.
           </p>
           <Link
             href="/clubs"

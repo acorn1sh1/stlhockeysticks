@@ -25,9 +25,10 @@ export default function Home() {
               ZERO SHIPPING.
             </h1>
             <p className="mt-6 max-w-md text-lg text-paper/70">
-              We buy composite sticks in bulk once a month and you pick them up
-              right here in St. Louis. Cut out the shipping, cut out the
-              middleman — keep the savings.
+              We buy composite twigs by the pallet, once a month, and you pick
+              them up right here in St. Louis — no distributor markup, no
+              $25 oversized-box shipping tax. Same carbon, same weave,
+              half the damage to your wallet.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
@@ -63,15 +64,15 @@ export default function Home() {
           {[
             {
               t: "Wholesale, Not Retail",
-              d: "We order factory-direct in bulk. You pay a fraction of pro-shop prices for comparable composite construction.",
+              d: "We order factory-direct, by the pallet. You pay a fraction of pro-shop sticker price for the same T1100/T800 carbon builds.",
             },
             {
-              t: "Monthly Batch Drops",
-              d: "Orders lock on the 1st of each month. Sticks land in St. Louis about two weeks later, ready for pickup.",
+              t: "Elite, Performance & Value Tiers",
+              d: "Every size — senior down to youth, plus goalie — comes in three builds. Snipe like it's the Blues' powerplay or grab a bender-proof backup, your call.",
             },
             {
               t: "Local Pickup Only",
-              d: "No $25 oversized-item shipping. Grab your sticks at our STL pickup spot and put that money toward tape.",
+              d: "No $25 oversized-item shipping fee. Swing by our STL pickup spot, grab your sticks, put that money toward tape instead.",
             },
           ].map((v) => (
             <div key={v.t} className="rounded-2xl border border-black/10 bg-white p-6">
@@ -84,8 +85,16 @@ export default function Home() {
 
       {/* FEATURED FULL STICKS */}
       <section className="mx-auto max-w-6xl px-4 pb-16">
-        <div className="mb-6 flex items-end justify-between">
-          <h2 className="text-3xl font-black tracking-tight">Full Sticks</h2>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-3xl font-black tracking-tight">Full Sticks</h2>
+            <p className="mt-1 text-sm text-black/50">
+              Need one tonight, not next month?{" "}
+              <Link href="/sticks#in-stock" className="font-bold text-volt-dark hover:underline">
+                Check what&apos;s In Stock →
+              </Link>
+            </p>
+          </div>
           <Link href="/sticks" className="text-sm font-bold text-volt-dark hover:underline">
             View all →
           </Link>
@@ -106,8 +115,9 @@ export default function Home() {
             </h2>
             <p className="mt-3 text-paper/70">
               Custom mini sticks in your club&apos;s colors — or wild Fun Series
-              designs for the basement league. The best $15–$20 you&apos;ll spend
-              on team spirit.
+              graphics for the basement-hockey diehards. $27.99, every
+              design, the best money you&apos;ll spend on team spirit and
+              carpet slap shots.
             </p>
           </div>
           <div className="grid gap-6 md:grid-cols-2">
@@ -133,10 +143,10 @@ export default function Home() {
         </h2>
         <div className="mt-10 grid gap-8 md:grid-cols-4">
           {[
-            ["1", "Order Online", "Pick your sticks, check out securely with Clover."],
-            ["2", "We Bulk-Buy", "Orders lock on the 1st. We place one big factory order."],
-            ["3", "Sticks Land in STL", "About two weeks later, your order arrives."],
-            ["4", "You Pick Up", "Grab your sticks locally. Zero shipping cost."],
+            ["1", "Order Online", "Pick your flex, curve, and colorway. Check out securely with Clover."],
+            ["2", "We Bulk-Buy", "Orders lock on the 1st. We place one big factory order — that's where the wholesale pricing comes from."],
+            ["3", "Sticks Land in STL", "About 5-6 weeks later, your batch rolls into St. Louis."],
+            ["4", "You Pick Up", "Swing by, grab your twigs, head straight to open ice. Zero shipping, zero hassle."],
           ].map(([n, t, d]) => (
             <div key={n} className="text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ink font-black text-volt">
