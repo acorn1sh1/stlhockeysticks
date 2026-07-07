@@ -37,7 +37,7 @@ export default async function SizeTierPage({ tier }: { tier: TierKey }) {
         {shipsNow.length > 0 && (
           <>
             <h2 id="in-stock" className="mt-10 scroll-mt-24 text-2xl font-black">
-              In Stock <span className="text-volt-dark">— Ships Now</span>
+              In Stock <span className="text-volt-dark">— Pick Up Now</span>
             </h2>
             <p className="mt-1 text-sm text-black/50">
               Built and sitting on the shelf today — no batch wait.

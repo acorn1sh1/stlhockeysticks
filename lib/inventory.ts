@@ -8,7 +8,7 @@ export type StockInfo = { inStock: number; active: boolean; preorder: boolean };
 // Live on-hand counts keyed by product slug. DB is the source of truth.
 // On DB error we return {} — callers then treat stocked items as
 // out-of-stock (pre-order fallback), which is the safe direction:
-// we never show "Ships Now" for something we can't confirm we have.
+// we never show "Pick Up Now" for something we can't confirm we have.
 export async function getStockMap(): Promise<Record<string, StockInfo>> {
   try {
     const rows = await prisma.product.findMany({

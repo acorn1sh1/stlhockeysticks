@@ -41,7 +41,7 @@ export default async function SticksPage() {
         {inStock.length > 0 && (
           <>
             <h2 id="in-stock" className="mt-10 scroll-mt-24 text-2xl font-black">
-              In Stock <span className="text-volt-dark">— Ships Now</span>
+              In Stock <span className="text-volt-dark">— Pick Up Now</span>
             </h2>
             <div className="mt-4 grid gap-6 md:grid-cols-3">
               {inStock.map((item) => (

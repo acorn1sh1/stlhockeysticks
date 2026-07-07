@@ -62,7 +62,7 @@ export default async function Home() {
                 href="/sticks#in-stock"
                 className="rounded-full border border-paper/30 px-7 py-3 font-bold transition hover:border-volt hover:text-volt"
               >
-                What Ships Now →
+                Pick Up Now →
               </Link>
             </div>
           </div>
@@ -124,14 +124,14 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* IN STOCK — SHIPS NOW (live) */}
+      {/* IN STOCK — PICK UP NOW (live) */}
       {inStock.length > 0 && (
         <section className="border-y border-black/10 bg-white/60">
           <div className="mx-auto max-w-6xl px-4 py-14">
             <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
               <div>
                 <h2 className="text-3xl font-black tracking-tight">
-                  On the Shelf <span className="text-volt-dark">— Ships Now</span>
+                  On the Shelf <span className="text-volt-dark">— Pick Up Now</span>
                 </h2>
                 <p className="mt-1 text-sm text-black/50">
                   Built and in hand today. No batch wait — grab it and go.

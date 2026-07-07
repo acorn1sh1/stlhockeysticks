@@ -39,7 +39,7 @@ export async function getMergedCatalog(): Promise<CatalogItem[]> {
       sizingTier: db.sizingTier ?? undefined,
       priceCents: db.priceCents,
       specs: db.specs?.length ? db.specs : staticItem?.specs,
-      badge: db.badge ?? staticItem?.badge ?? (db.type === "IN_STOCK" ? "Ships Now" : undefined),
+      badge: db.badge ?? staticItem?.badge ?? (db.type === "IN_STOCK" ? "Pick Up Now" : undefined),
       options: db.configurable ? staticItem?.options ?? EMPTY_OPTIONS : undefined,
       inStock: db.type === "IN_STOCK" ? true : undefined,
     };
