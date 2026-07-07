@@ -1,13 +1,44 @@
 import Link from "next/link";
 import BatchBanner from "@/components/BatchBanner";
 import ProductCard from "@/components/ProductCard";
-import { CATALOG } from "@/lib/catalog";
+import StickPhoto from "@/components/StickPhoto";
+import { fmtPrice, type CatalogItem } from "@/lib/catalog";
+import { getStockMap } from "@/lib/inventory";
+import { getMergedCatalog } from "@/lib/products";
 
-export default function Home() {
-  const featured = CATALOG.slice(0, 3);
-  const minis = CATALOG.filter(
+export const dynamic = "force-dynamic";
+
+// Size groups drive the "Shop by Size" grid. Each links into the
+// matching anchor on /sticks. "from" price = cheapest build in the size.
+const SIZE_GROUPS: {
+  key: string;
+  label: string;
+  tag: string;
+  match: (c: CatalogItem) => boolean;
+}[] = [
+  { key: "senior", label: "Senior", tag: "Adult & beer league", match: (c) => c.slug.includes("senior") },
+  { key: "intermediate", label: "Intermediate", tag: "Stepping up to full ice", match: (c) => c.slug.includes("intermediate") },
+  { key: "junior", label: "Junior", tag: "Growing players", match: (c) => c.slug.includes("junior") },
+  { key: "youth", label: "Youth", tag: "Little rippers", match: (c) => c.slug.includes("youth") },
+  { key: "goalie", label: "Goalie", tag: "Between the pipes", match: (c) => c.category === "GOALIE" },
+];
+
+export default async function Home() {
+  const [stockMap, catalog] = await Promise.all([
+    getStockMap(),
+    getMergedCatalog(),
+  ]);
+  const configurable = catalog.filter((c) => c.options);
+  const minis = catalog.filter(
     (c) => c.category === "MINI_CLUB" || c.category === "MINI_FUN"
   );
+  const inStock = catalog.filter((c) => c.inStock);
+
+  const sizes = SIZE_GROUPS.map((g) => {
+    const items = configurable.filter(g.match);
+    const fromCents = items.length ? Math.min(...items.map((i) => i.priceCents)) : 0;
+    return { ...g, fromCents, count: items.length };
+  }).filter((g) => g.count > 0);
 
   return (
     <>
@@ -25,10 +56,9 @@ export default function Home() {
               ZERO SHIPPING.
             </h1>
             <p className="mt-6 max-w-md text-lg text-paper/70">
-              We buy composite twigs by the pallet, once a month, and you pick
-              them up right here in St. Louis — no distributor markup, no
-              $25 oversized-box shipping tax. Same carbon, same weave,
-              half the damage to your wallet.
+              Composite twigs for every player on the roster — senior to youth,
+              plus goalie — bought by the pallet and picked up right here in St.
+              Louis. No distributor markup, no oversized-box shipping tax.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
@@ -38,25 +68,93 @@ export default function Home() {
                 Shop Full Sticks
               </Link>
               <Link
-                href="/mini-sticks"
+                href="/sticks#in-stock"
                 className="rounded-full border border-paper/30 px-7 py-3 font-bold transition hover:border-volt hover:text-volt"
               >
-                Shop Mini Sticks
+                What Ships Now →
               </Link>
             </div>
           </div>
-          <div className="hidden justify-center md:flex">
-            <svg viewBox="0 0 300 300" className="h-80 w-80">
-              <circle cx="150" cy="150" r="140" fill="none" stroke="#b8e62e" strokeWidth="2" opacity="0.3" />
-              <path
-                d="M60 40 L200 240 Q206 249 218 252 L252 260 Q260 262 258 270 L256 276 Q254 284 246 282 L208 273 Q190 269 180 255 L44 52 Q40 46 46 41 L50 38 Q56 34 60 40 Z"
-                fill="#fafafa"
-              />
-              <path d="M60 40 L110 112 L96 122 L44 52 Q40 46 46 41 L50 38 Q56 34 60 40 Z" fill="#b8e62e" />
-            </svg>
+          <div className="relative hidden items-center justify-center md:flex">
+            <div className="absolute h-72 w-72 rounded-full border-2 border-volt/30" />
+            <StickPhoto colorway="carbon" rotate={-10} className="relative h-96 w-full" />
           </div>
         </div>
       </section>
+
+      {/* SHOP BY SIZE */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-3xl font-black tracking-tight">Shop by Size</h2>
+            <p className="mt-1 text-sm text-black/50">
+              Every size comes in three builds — Elite, Performance, and Value.
+              Pick your player, then dial in flex, curve, and color.
+            </p>
+          </div>
+          <Link href="/sticks" className="text-sm font-bold text-volt-dark hover:underline">
+            View all builds →
+          </Link>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          {sizes.map((s) => (
+            <Link
+              key={s.key}
+              href={`/sticks#${s.key}`}
+              className="group flex flex-col justify-between rounded-2xl border border-black/10 bg-white p-5 transition hover:border-volt hover:shadow-xl"
+            >
+              <div>
+                <div className="flex h-20 items-center justify-center">
+                  <StickPhoto
+                    colorway="carbon"
+                    className="h-20 w-full transition group-hover:scale-105"
+                  />
+                </div>
+                <h3 className="text-lg font-black">{s.label}</h3>
+                <p className="mt-0.5 text-xs font-semibold text-black/50">{s.tag}</p>
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-sm font-bold text-black/70">
+                  from {fmtPrice(s.fromCents)}
+                </span>
+                <span className="text-sm font-black text-volt-dark transition group-hover:translate-x-0.5">
+                  →
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* IN STOCK — SHIPS NOW (live) */}
+      {inStock.length > 0 && (
+        <section className="border-y border-black/10 bg-white/60">
+          <div className="mx-auto max-w-6xl px-4 py-14">
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className="text-3xl font-black tracking-tight">
+                  On the Shelf <span className="text-volt-dark">— Ships Now</span>
+                </h2>
+                <p className="mt-1 text-sm text-black/50">
+                  Built and in hand today. No batch wait — grab it and go.
+                </p>
+              </div>
+              <Link href="/sticks#in-stock" className="text-sm font-bold text-volt-dark hover:underline">
+                See all in-stock →
+              </Link>
+            </div>
+            <div className="grid gap-6 md:grid-cols-4">
+              {inStock.map((item) => (
+                <ProductCard
+                  key={item.slug}
+                  item={item}
+                  stock={stockMap[item.slug]?.inStock ?? 0}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* VALUE PROPS */}
       <section className="mx-auto max-w-6xl px-4 py-16">
@@ -67,8 +165,8 @@ export default function Home() {
               d: "We order factory-direct, by the pallet. You pay a fraction of pro-shop sticker price for the same T1100/T800 carbon builds.",
             },
             {
-              t: "Elite, Performance & Value Tiers",
-              d: "Every size — senior down to youth, plus goalie — comes in three builds. Snipe like it's the Blues' powerplay or grab a bender-proof backup, your call.",
+              t: "Every Size, Three Tiers",
+              d: "Senior down to youth, plus goalie — each in Elite, Performance, and Value builds. Snipe like the powerplay or grab a bender-proof backup.",
             },
             {
               t: "Local Pickup Only",
@@ -79,29 +177,6 @@ export default function Home() {
               <h3 className="text-lg font-black">{v.t}</h3>
               <p className="mt-2 text-sm text-black/60">{v.d}</p>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* FEATURED FULL STICKS */}
-      <section className="mx-auto max-w-6xl px-4 pb-16">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-3xl font-black tracking-tight">Full Sticks</h2>
-            <p className="mt-1 text-sm text-black/50">
-              Need one tonight, not next month?{" "}
-              <Link href="/sticks#in-stock" className="font-bold text-volt-dark hover:underline">
-                Check what&apos;s In Stock →
-              </Link>
-            </p>
-          </div>
-          <Link href="/sticks" className="text-sm font-bold text-volt-dark hover:underline">
-            View all →
-          </Link>
-        </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          {featured.map((item) => (
-            <ProductCard key={item.slug} item={item} />
           ))}
         </div>
       </section>
@@ -145,7 +220,7 @@ export default function Home() {
           {[
             ["1", "Order Online", "Pick your flex, curve, and colorway. Check out securely with Clover."],
             ["2", "We Bulk-Buy", "Orders lock on the 1st. We place one big factory order — that's where the wholesale pricing comes from."],
-            ["3", "Sticks Land in STL", "About 5-6 weeks later, your batch rolls into St. Louis."],
+            ["3", "Sticks Land in STL", "About 2 weeks later, your batch rolls into St. Louis."],
             ["4", "You Pick Up", "Swing by, grab your twigs, head straight to open ice. Zero shipping, zero hassle."],
           ].map(([n, t, d]) => (
             <div key={n} className="text-center">

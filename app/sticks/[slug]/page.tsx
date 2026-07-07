@@ -3,7 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import BatchBanner from "@/components/BatchBanner";
 import Configurator from "@/components/Configurator";
+import StickPhoto from "@/components/StickPhoto";
 import { CATALOG } from "@/lib/catalog";
+import { getMergedItem } from "@/lib/products";
+
+export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
   return CATALOG.filter((c) => c.options).map((c) => ({ slug: c.slug }));
@@ -25,8 +29,8 @@ export default async function StickDetail({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const item = CATALOG.find((c) => c.slug === slug && c.options);
-  if (!item) notFound();
+  const item = await getMergedItem(slug);
+  if (!item?.options) notFound();
 
   return (
     <>
@@ -38,12 +42,11 @@ export default async function StickDetail({
         <div className="mt-4 grid gap-10 md:grid-cols-2">
           <div>
             <div className="flex h-72 items-center justify-center rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-600">
-              <svg viewBox="0 0 200 60" className="h-24 w-56 opacity-90">
-                <path
-                  d="M10 8 L150 42 Q160 45 175 45 L192 45 Q196 45 196 49 L196 52 Q196 55 192 55 L170 55 Q152 55 140 51 L6 19 Q2 18 3 14 L4 11 Q5 7 10 8 Z"
-                  fill="white"
-                />
-              </svg>
+              <StickPhoto
+                colorway={item.category === "GOALIE" ? "goalie" : "carbon"}
+                rotate={-12}
+                className="h-64 w-full drop-shadow-xl"
+              />
             </div>
             <h1 className="mt-6 text-3xl font-black tracking-tight">{item.name}</h1>
             <p className="mt-2 text-black/60">{item.description}</p>

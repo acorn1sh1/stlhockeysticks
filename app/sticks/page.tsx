@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import ProductCard from "@/components/ProductCard";
 import BatchBanner from "@/components/BatchBanner";
-import { CATALOG } from "@/lib/catalog";
+import { getStockMap } from "@/lib/inventory";
+import { getMergedCatalog } from "@/lib/products";
 
 export const metadata: Metadata = {
   title: "Full-Size Composite Sticks",
@@ -9,9 +10,15 @@ export const metadata: Metadata = {
     "Senior, intermediate, junior, youth, and goalie composite hockey sticks at wholesale prices. Custom flex, curve, color, and name. Local St. Louis pickup.",
 };
 
-export default function SticksPage() {
-  const configurable = CATALOG.filter((c) => c.options);
-  const inStock = CATALOG.filter((c) => c.inStock);
+export const dynamic = "force-dynamic";
+
+export default async function SticksPage() {
+  const [stockMap, catalog] = await Promise.all([
+    getStockMap(),
+    getMergedCatalog(),
+  ]);
+  const configurable = catalog.filter((c) => c.options);
+  const inStock = catalog.filter((c) => c.inStock);
   const senior = configurable.filter((c) => c.slug.includes("senior"));
   const intermediate = configurable.filter((c) => c.slug.includes("intermediate"));
   const junior = configurable.filter((c) => c.slug.includes("junior"));
@@ -37,41 +44,45 @@ export default function SticksPage() {
             </h2>
             <div className="mt-4 grid gap-6 md:grid-cols-3">
               {inStock.map((item) => (
-                <ProductCard key={item.slug} item={item} />
+                <ProductCard
+                  key={item.slug}
+                  item={item}
+                  stock={stockMap[item.slug]?.inStock ?? 0}
+                />
               ))}
             </div>
           </>
         )}
 
-        <h2 className="mt-12 text-2xl font-black">Senior — pick your build</h2>
+        <h2 id="senior" className="mt-12 scroll-mt-24 text-2xl font-black">Senior — pick your build</h2>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {senior.map((item) => (
             <ProductCard key={item.slug} item={item} />
           ))}
         </div>
 
-        <h2 className="mt-12 text-2xl font-black">Intermediate — pick your build</h2>
+        <h2 id="intermediate" className="mt-12 scroll-mt-24 text-2xl font-black">Intermediate — pick your build</h2>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {intermediate.map((item) => (
             <ProductCard key={item.slug} item={item} />
           ))}
         </div>
 
-        <h2 className="mt-12 text-2xl font-black">Junior — pick your build</h2>
+        <h2 id="junior" className="mt-12 scroll-mt-24 text-2xl font-black">Junior — pick your build</h2>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {junior.map((item) => (
             <ProductCard key={item.slug} item={item} />
           ))}
         </div>
 
-        <h2 className="mt-12 text-2xl font-black">Youth — pick your build</h2>
+        <h2 id="youth" className="mt-12 scroll-mt-24 text-2xl font-black">Youth — pick your build</h2>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {youth.map((item) => (
             <ProductCard key={item.slug} item={item} />
           ))}
         </div>
 
-        <h2 className="mt-12 text-2xl font-black">Goalies — pick your build</h2>
+        <h2 id="goalie" className="mt-12 scroll-mt-24 text-2xl font-black">Goalies — pick your build</h2>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {goalie.map((item) => (
             <ProductCard key={item.slug} item={item} />

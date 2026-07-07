@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
 import { useState } from "react";
+import { LogoLink } from "@/components/Logo";
 
 const nav = [
   { href: "/sticks", label: "Full Sticks" },
@@ -18,12 +19,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-black/10 bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 font-black tracking-tight">
-          <span className="inline-block rounded bg-ink px-2 py-1 text-sm text-volt">
-            STL
-          </span>
-          <span className="text-lg">HOCKEY STICKS</span>
-        </Link>
+        <LogoLink variant="light" size={22} />
 
         <nav className="hidden items-center gap-6 text-sm font-semibold md:flex">
           {nav.map((n) => (

@@ -60,6 +60,10 @@ model Order {
   items         OrderItem[]
   subtotalCents Int
   discountCents Int      @default(0) // club bulk "donation back" discount already netted into subtotalCents
+  couponId      String? // applied promo code, if any
+  coupon        Coupon?  @relation(fields: [couponId], references: [id])
+  couponCode    String? // denormalized code for display/history
+  couponDiscountCents Int @default(0) // coupon savings already netted into subtotalCents
   status        OrderStatus @default(PENDING_PAYMENT)
   cloverCheckoutId String? @unique
   cloverPaymentId  String?
@@ -67,6 +71,26 @@ model Order {
   warrantyClaims WarrantyClaim[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// Promo / discount codes managed from /admin and applied at checkout.
+model Coupon {
+  id               String   @id @default(cuid())
+  code             String   @unique // stored uppercase
+  kind             CouponKind
+  value            Int // PERCENT: 1-100 ; FIXED: cents off
+  active           Boolean  @default(true)
+  minSubtotalCents Int      @default(0) // order must reach this (pre-coupon) to qualify
+  maxRedemptions   Int? // null = unlimited
+  timesRedeemed    Int      @default(0)
+  expiresAt        DateTime?
+  orders           Order[]
+  createdAt        DateTime @default(now())
+}
+
+enum CouponKind {
+  PERCENT
+  FIXED
 }
 
 enum OrderStatus {

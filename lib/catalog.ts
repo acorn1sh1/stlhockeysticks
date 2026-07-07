@@ -351,13 +351,13 @@ export function optionsSummary(sel?: SelectedOptions) {
 }
 
 // Monthly batch logic (display only — real batches live in DB)
-// Cutoff is always the 1st of next month. Manufacturing + shipping runs
-// ~5-6 weeks from cutoff, so pickup is estimated 35-42 days after cutoff.
+// Cutoff is always the 1st of next month. Allow ~2 weeks for shipping,
+// so pickup is estimated 14-18 days after cutoff.
 export function nextBatch() {
   const now = new Date();
   const cutoff = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const pickupStart = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate() + 35);
-  const pickupEnd = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate() + 42);
+  const pickupStart = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate() + 14);
+  const pickupEnd = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate() + 18);
   const daysLeft = Math.max(
     0,
     Math.ceil((cutoff.getTime() - now.getTime()) / 86400000)

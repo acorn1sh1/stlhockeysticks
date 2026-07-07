@@ -1,14 +1,12 @@
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 export default function Footer() {
   return (
     <footer className="bg-ink text-paper">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-3">
         <div>
-          <div className="font-black tracking-tight">
-            <span className="rounded bg-volt px-2 py-1 text-sm text-ink">STL</span>{" "}
-            HOCKEY STICKS
-          </div>
+          <Logo variant="dark" size={20} />
           <p className="mt-3 text-sm text-paper/70">
             Wholesale sticks, monthly batches, local St. Louis pickup. No
             shipping fees. No retail markup.

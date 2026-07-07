@@ -8,9 +8,45 @@ import { clubDiscountCents, fmtPrice, nextBatch, optionsSummary } from "@/lib/ca
 export default function CartPage() {
   const { lines, setQty, remove, subtotalCents } = useCart();
   const discountCents = clubDiscountCents(lines);
+  const afterClubCents = subtotalCents - discountCents;
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [state, setState] = useState<"idle" | "sending" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Coupon state (preview only — checkout re-validates server-side)
+  const [couponInput, setCouponInput] = useState("");
+  const [applied, setApplied] = useState<{ code: string; discountCents: number } | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const couponDiscountCents = applied
+    ? Math.min(applied.discountCents, afterClubCents)
+    : 0;
+  const totalCents = afterClubCents - couponDiscountCents;
+
+  async function applyCoupon() {
+    if (!couponInput.trim()) return;
+    setCouponBusy(true);
+    setCouponError("");
+    const res = await fetch("/api/coupon", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: couponInput, subtotalCents: afterClubCents }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setCouponBusy(false);
+    if (res.ok && data.ok) {
+      setApplied({ code: data.code, discountCents: data.discountCents });
+      setCouponInput("");
+    } else {
+      setApplied(null);
+      setCouponError(data.error ?? "Couldn't apply that code.");
+    }
+  }
+
+  function removeCoupon() {
+    setApplied(null);
+    setCouponError("");
+  }
 
   async function checkout() {
     setState("sending");
@@ -20,6 +56,7 @@ export default function CartPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        couponCode: applied?.code,
         lines: lines.map((l) => ({
           slug: l.slug,
           quantity: l.quantity,
@@ -144,10 +181,51 @@ export default function CartPage() {
               <span>−{fmtPrice(discountCents)}</span>
             </div>
           )}
-          {discountCents > 0 && (
-            <div className="mt-1 flex justify-between text-lg">
+
+          {/* Promo code */}
+          <div className="mt-3">
+            {applied ? (
+              <div className="flex items-center justify-between rounded-lg bg-volt/20 px-3 py-2 text-sm font-semibold">
+                <span>
+                  Code <span className="font-black">{applied.code}</span> applied
+                </span>
+                <button onClick={removeCoupon} className="text-black/50 hover:text-red-600">
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  aria-label="Promo code"
+                  placeholder="Promo code"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                  className="w-full rounded-lg border border-black/20 px-3 py-2 text-sm font-semibold uppercase tracking-wide"
+                />
+                <button
+                  onClick={applyCoupon}
+                  disabled={couponBusy || !couponInput.trim()}
+                  className="shrink-0 rounded-lg bg-ink px-4 py-2 text-sm font-bold text-paper hover:bg-ink/80 disabled:opacity-40"
+                >
+                  {couponBusy ? "..." : "Apply"}
+                </button>
+              </div>
+            )}
+            {couponError && <p className="mt-1 text-xs text-red-600">{couponError}</p>}
+          </div>
+
+          {couponDiscountCents > 0 && (
+            <div className="mt-2 flex justify-between text-sm font-semibold text-volt-dark">
+              <span>Promo {applied?.code}</span>
+              <span>−{fmtPrice(couponDiscountCents)}</span>
+            </div>
+          )}
+
+          {(discountCents > 0 || couponDiscountCents > 0) && (
+            <div className="mt-2 flex justify-between text-lg">
               <span className="font-bold">Total</span>
-              <span className="font-black">{fmtPrice(subtotalCents - discountCents)}</span>
+              <span className="font-black">{fmtPrice(totalCents)}</span>
             </div>
           )}
           <p className="mt-1 text-right text-xs text-black/50">

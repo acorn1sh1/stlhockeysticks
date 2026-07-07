@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { decrementForOrder } from "@/lib/inventory";
 
 // Clover webhook receiver.
 // Configure in Clover dashboard -> webhooks, point at
@@ -24,10 +25,34 @@ export async function POST(req: Request) {
         const objectId: string | undefined = ev?.objectId;
         if (!objectId) continue;
         const id = objectId.includes(":") ? objectId.split(":")[1] : objectId;
-        await prisma.order.updateMany({
+        // Find the still-unpaid order first so we only decrement stock
+        // on the PENDING_PAYMENT -> PAID transition (idempotent: a repeat
+        // webhook finds nothing pending and skips the decrement).
+        const pending = await prisma.order.findFirst({
           where: { cloverCheckoutId: id, status: "PENDING_PAYMENT" },
+          select: { id: true, couponId: true },
+        });
+        if (!pending) continue;
+        await prisma.order.update({
+          where: { id: pending.id },
           data: { status: "PAID" },
         });
+        try {
+          await decrementForOrder(pending.id);
+        } catch (e) {
+          console.error("stock decrement error", pending.id, e);
+        }
+        // Count the coupon redemption now that payment is confirmed.
+        if (pending.couponId) {
+          try {
+            await prisma.coupon.update({
+              where: { id: pending.couponId },
+              data: { timesRedeemed: { increment: 1 } },
+            });
+          } catch (e) {
+            console.error("coupon redeem increment error", pending.couponId, e);
+          }
+        }
       }
     }
   } catch (e) {

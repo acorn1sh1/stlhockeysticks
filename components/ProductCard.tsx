@@ -4,6 +4,7 @@ import Link from "next/link";
 import { fmtPrice, type CatalogItem } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
 import { useState } from "react";
+import StickPhoto from "@/components/StickPhoto";
 
 const art: Record<CatalogItem["category"], string> = {
   FULL_STICK: "from-zinc-800 to-zinc-600",
@@ -12,14 +13,43 @@ const art: Record<CatalogItem["category"], string> = {
   MINI_FUN: "from-fuchsia-700 to-orange-500",
 };
 
-export default function ProductCard({ item }: { item: CatalogItem }) {
+const stickColor: Record<
+  CatalogItem["category"],
+  "carbon" | "goalie" | "club" | "fun"
+> = {
+  FULL_STICK: "carbon",
+  GOALIE: "goalie",
+  MINI_CLUB: "club",
+  MINI_FUN: "fun",
+};
+
+// `stock` is the live on-hand count for physically-stocked SKUs
+// (items with catalog flag `inStock: true`). Omit for built-to-order
+// / pre-order products. When a stocked SKU hits 0 it falls back to
+// pre-order into the next batch rather than going unbuyable.
+export default function ProductCard({
+  item,
+  stock,
+}: {
+  item: CatalogItem;
+  stock?: number;
+}) {
   const { add } = useCart();
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
   const configurable = !!item.options;
 
+  const stocked = !!item.inStock; // catalog flag: carries live inventory
+  const shipsNow = stocked && typeof stock === "number" && stock > 0;
+  const preorderFallback = stocked && !shipsNow;
+  const lowStock = shipsNow && (stock as number) <= 5;
+
+  // Ships-now items can be bought in multiples; pre-order fallback keeps it simple.
+  const canPickQty = shipsNow;
+  const badge = preorderFallback ? "Pre-order — Next Batch" : item.badge;
+
   const onAdd = () => {
-    add(item, undefined, item.inStock ? qty : 1);
+    add(item, undefined, canPickQty ? qty : 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1200);
   };
@@ -29,15 +59,22 @@ export default function ProductCard({ item }: { item: CatalogItem }) {
       <div
         className={`relative flex h-44 items-center justify-center bg-gradient-to-br ${art[item.category]}`}
       >
-        <svg viewBox="0 0 200 60" className="h-16 w-40 opacity-90">
-          <path
-            d="M10 8 L150 42 Q160 45 175 45 L192 45 Q196 45 196 49 L196 52 Q196 55 192 55 L170 55 Q152 55 140 51 L6 19 Q2 18 3 14 L4 11 Q5 7 10 8 Z"
-            fill="white"
-          />
-        </svg>
-        {item.badge && (
-          <span className="absolute left-3 top-3 rounded-full bg-volt px-3 py-1 text-xs font-bold text-ink">
-            {item.badge}
+        <StickPhoto
+          colorway={stickColor[item.category]}
+          className="h-40 w-full drop-shadow-lg"
+        />
+        {badge && (
+          <span
+            className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-bold ${
+              preorderFallback ? "bg-ink text-volt" : "bg-volt text-ink"
+            }`}
+          >
+            {badge}
+          </span>
+        )}
+        {lowStock && (
+          <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-ink">
+            Only {stock} left
           </span>
         )}
       </div>
@@ -56,6 +93,11 @@ export default function ProductCard({ item }: { item: CatalogItem }) {
             ))}
           </div>
         )}
+        {preorderFallback && (
+          <p className="mt-3 text-xs font-semibold text-black/50">
+            Out of on-hand stock — order now and it ships with the next monthly batch.
+          </p>
+        )}
         <div className="mt-4 flex flex-1 items-end justify-between gap-2">
           <span className="text-xl font-black">{fmtPrice(item.priceCents)}</span>
           {configurable ? (
@@ -67,7 +109,7 @@ export default function ProductCard({ item }: { item: CatalogItem }) {
             </Link>
           ) : (
             <div className="flex items-center gap-2">
-              {item.inStock && (
+              {canPickQty && (
                 <div className="flex items-center gap-1">
                   <button
                     aria-label="Decrease quantity"
@@ -92,7 +134,7 @@ export default function ProductCard({ item }: { item: CatalogItem }) {
                   added ? "bg-volt text-ink" : "bg-ink text-paper hover:bg-ink/80"
                 }`}
               >
-                {added ? "Added ✓" : "Add to Cart"}
+                {added ? "Added ✓" : preorderFallback ? "Pre-order" : "Add to Cart"}
               </button>
             </div>
           )}
