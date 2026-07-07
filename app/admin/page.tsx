@@ -91,6 +91,7 @@ export default async function AdminPage() {
           createdAt: o.createdAt.toISOString(),
           batchName: o.batch?.name ?? null,
         }))}
+        categories={categoryRows.map((c) => c.key)}
       />
 
       <div className="mx-auto max-w-5xl space-y-12 px-4">
