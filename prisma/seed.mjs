@@ -162,15 +162,6 @@ const products = [
     inStock: 15,
     preorder: false,
   },
-  {
-    slug: "instock-goalie-26-paddle",
-    name: 'In-Stock Goalie — 26" Paddle',
-    description: '480g, 18K weave, 26" paddle, right hand. On the shelf now.',
-    category: "GOALIE",
-    priceCents: 12900,
-    inStock: 6,
-    preorder: false,
-  },
 
   // ---- MINI STICKS ----
   {
@@ -196,7 +187,6 @@ const FIXED_BUILD = {
   "instock-senior-85-p92": { fixedFlex: 85, fixedCurve: "P92", fixedHand: "Right", fixedLength: '60"' },
   "instock-senior-75-p28": { fixedFlex: 75, fixedCurve: "P28", fixedHand: "Right", fixedLength: '60"' },
   "instock-junior-50-p92": { fixedFlex: 50, fixedCurve: "P92", fixedHand: "Right", fixedLength: '54"' },
-  "instock-goalie-26-paddle": { fixedHand: "Right" },
 };
 
 for (const p of products) {
@@ -209,6 +199,12 @@ for (const p of products) {
     create: data,
   });
 }
+
+// Retire the goalie in-stock SKU if a prior seed created it (senior + junior only to start).
+await prisma.product.updateMany({
+  where: { slug: "instock-goalie-26-paddle" },
+  data: { active: false, inStock: 0 },
+});
 
 // ---- Option catalog (admin-editable) ----
 // Seeded from the defaults that used to live in lib/catalog.ts. Admin can

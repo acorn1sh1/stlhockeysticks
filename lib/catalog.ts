@@ -267,17 +267,6 @@ export const CATALOG: CatalogItem[] = [
     specs: ["315g", "18K weave", "50 Flex", "P92 curve", "Right hand"],
     inStock: true,
   },
-  {
-    slug: "instock-goalie-26-paddle",
-    name: 'In-Stock Goalie — 26" Paddle',
-    description:
-      "Full-carbon goalie paddle, 26\", ready now. No monthly batch — just show up and steal a game.",
-    category: "GOALIE",
-    priceCents: 12900,
-    badge: "Ships Now",
-    specs: ["480g", "18K weave", '26" paddle', "Right hand"],
-    inStock: true,
-  },
 
   // ---- MINI STICKS ----
   {
