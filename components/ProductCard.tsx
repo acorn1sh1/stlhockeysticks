@@ -43,6 +43,12 @@ export default function ProductCard({
   const shipsNow = stocked && typeof stock === "number" && stock > 0;
   const preorderFallback = stocked && !shipsNow;
   const lowStock = shipsNow && (stock as number) <= 5;
+  // Configurable builds (Senior/Int/Jr/Youth/Goalie tiers) always carry no
+  // live inventory — they're built to order every batch. Flag this
+  // explicitly so the full /sticks page never reads as "in stock" by
+  // default; the top-left badge is reserved for the quality tier (Top
+  // Shelf / Best Seller / Best Value).
+  const buildToOrder = configurable && !stocked;
 
   // Ships-now items can be bought in multiples; pre-order fallback keeps it simple.
   const canPickQty = shipsNow;
@@ -96,6 +102,14 @@ export default function ProductCard({
         {preorderFallback && (
           <p className="mt-3 text-xs font-semibold text-black/50">
             Out of on-hand stock — order now and it ships with the next monthly batch.
+          </p>
+        )}
+        {buildToOrder && (
+          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-black/50">
+            <span className="rounded-full bg-black/5 px-2 py-0.5 font-bold text-black/60">
+              Pre-order
+            </span>
+            Built to order — ships with the next monthly batch.
           </p>
         )}
         <div className="mt-4 flex flex-1 flex-col justify-end gap-3">

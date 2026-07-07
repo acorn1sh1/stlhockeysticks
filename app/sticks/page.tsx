@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import BatchBanner from "@/components/BatchBanner";
 import { getStockMap } from "@/lib/inventory";
@@ -54,35 +55,85 @@ export default async function SticksPage() {
           </>
         )}
 
-        <h2 id="senior" className="mt-12 scroll-mt-24 text-2xl font-black">Senior — pick your build</h2>
+        <div id="senior" className="mt-12 flex scroll-mt-24 flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black">Senior — pick your build</h2>
+            <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-volt">
+              Pre-order — Next Batch
+            </span>
+          </div>
+          <Link href="/sticks/senior" className="text-sm font-bold text-volt-dark hover:underline">
+            Senior only →
+          </Link>
+        </div>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {senior.map((item) => (
             <ProductCard key={item.slug} item={item} />
           ))}
         </div>
 
-        <h2 id="intermediate" className="mt-12 scroll-mt-24 text-2xl font-black">Intermediate — pick your build</h2>
+        <div id="intermediate" className="mt-12 flex scroll-mt-24 flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black">Intermediate — pick your build</h2>
+            <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-volt">
+              Pre-order — Next Batch
+            </span>
+          </div>
+          <Link href="/sticks/intermediate" className="text-sm font-bold text-volt-dark hover:underline">
+            Intermediate only →
+          </Link>
+        </div>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {intermediate.map((item) => (
             <ProductCard key={item.slug} item={item} />
           ))}
         </div>
 
-        <h2 id="junior" className="mt-12 scroll-mt-24 text-2xl font-black">Junior — pick your build</h2>
+        <div id="junior" className="mt-12 flex scroll-mt-24 flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black">Junior — pick your build</h2>
+            <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-volt">
+              Pre-order — Next Batch
+            </span>
+          </div>
+          <Link href="/sticks/junior" className="text-sm font-bold text-volt-dark hover:underline">
+            Junior only →
+          </Link>
+        </div>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {junior.map((item) => (
             <ProductCard key={item.slug} item={item} />
           ))}
         </div>
 
-        <h2 id="youth" className="mt-12 scroll-mt-24 text-2xl font-black">Youth — pick your build</h2>
+        <div id="youth" className="mt-12 flex scroll-mt-24 flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black">Youth — pick your build</h2>
+            <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-volt">
+              Pre-order — Next Batch
+            </span>
+          </div>
+          <Link href="/sticks/youth" className="text-sm font-bold text-volt-dark hover:underline">
+            Youth only →
+          </Link>
+        </div>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {youth.map((item) => (
             <ProductCard key={item.slug} item={item} />
           ))}
         </div>
 
-        <h2 id="goalie" className="mt-12 scroll-mt-24 text-2xl font-black">Goalies — pick your build</h2>
+        <div id="goalie" className="mt-12 flex scroll-mt-24 flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-black">Goalies — pick your build</h2>
+            <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-volt">
+              Pre-order — Next Batch
+            </span>
+          </div>
+          <Link href="/sticks/goalie" className="text-sm font-bold text-volt-dark hover:underline">
+            Goalie only →
+          </Link>
+        </div>
         <div className="mt-4 grid gap-6 md:grid-cols-3">
           {goalie.map((item) => (
             <ProductCard key={item.slug} item={item} />

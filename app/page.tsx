@@ -2,26 +2,17 @@ import Link from "next/link";
 import BatchBanner from "@/components/BatchBanner";
 import ProductCard from "@/components/ProductCard";
 import StickPhoto from "@/components/StickPhoto";
-import { fmtPrice, type CatalogItem } from "@/lib/catalog";
+import { fmtPrice } from "@/lib/catalog";
 import { getStockMap } from "@/lib/inventory";
 import { getMergedCatalog } from "@/lib/products";
+import { SIZE_TIERS as SIZE_GROUPS } from "@/lib/sizeTiers";
 
 export const dynamic = "force-dynamic";
 
-// Size groups drive the "Shop by Size" grid. Each links into the
-// matching anchor on /sticks. "from" price = cheapest build in the size.
-const SIZE_GROUPS: {
-  key: string;
-  label: string;
-  tag: string;
-  match: (c: CatalogItem) => boolean;
-}[] = [
-  { key: "senior", label: "Senior", tag: "Adult & beer league", match: (c) => c.slug.includes("senior") },
-  { key: "intermediate", label: "Intermediate", tag: "Stepping up to full ice", match: (c) => c.slug.includes("intermediate") },
-  { key: "junior", label: "Junior", tag: "Growing players", match: (c) => c.slug.includes("junior") },
-  { key: "youth", label: "Youth", tag: "Little rippers", match: (c) => c.slug.includes("youth") },
-  { key: "goalie", label: "Goalie", tag: "Between the pipes", match: (c) => c.category === "GOALIE" },
-];
+// Size groups drive the "Shop by Size" grid. Each links into its own
+// dedicated /sticks/[tier] page (not an anchor on the combined page) —
+// clicking "Senior" should only show senior builds, not the whole catalog.
+// "from" price = cheapest build in the size.
 
 export default async function Home() {
   const [stockMap, catalog] = await Promise.all([
@@ -107,7 +98,7 @@ export default async function Home() {
           {sizes.map((s) => (
             <Link
               key={s.key}
-              href={`/sticks#${s.key}`}
+              href={`/sticks/${s.key}`}
               className="group flex flex-col justify-between rounded-2xl border border-black/10 bg-white p-5 transition hover:border-volt hover:shadow-xl"
             >
               <div>
@@ -227,7 +218,7 @@ export default async function Home() {
           {[
             ["1", "Order Online", "Pick your flex, curve, and colorway. Check out securely with Clover."],
             ["2", "We Bulk-Buy", "Orders lock on the 1st. We place one big factory order — that's where the wholesale pricing comes from."],
-            ["3", "Sticks Land in STL", "About 2 weeks later, your batch rolls into St. Louis."],
+            ["3", "Sticks Land in STL", "About a month to build, then ~2 weeks to ship — your batch rolls into St. Louis roughly 6 weeks after cutoff."],
             ["4", "You Pick Up", "Swing by, grab your twigs, head straight to open ice. Zero shipping, zero hassle."],
           ].map(([n, t, d]) => (
             <div key={n} className="text-center">
