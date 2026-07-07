@@ -4,6 +4,9 @@ import AdminLogin from "@/components/admin/AdminLogin";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminProducts from "@/components/admin/AdminProducts";
 import AdminOptions from "@/components/admin/AdminOptions";
+import AdminCategories from "@/components/admin/AdminCategories";
+import AdminSizingTiers from "@/components/admin/AdminSizingTiers";
+import AdminAttributeKinds from "@/components/admin/AdminAttributeKinds";
 import AdminCoupons from "@/components/admin/AdminCoupons";
 import AdminWarranty from "@/components/admin/AdminWarranty";
 
@@ -35,17 +38,12 @@ export default async function AdminPage() {
 
   const allProducts = await prisma.product.findMany({
     orderBy: [{ active: "desc" }, { name: "asc" }],
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      category: true,
-      priceCents: true,
-      inStock: true,
-      preorder: true,
-      active: true,
-    },
+    include: { _count: { select: { orderItems: true } } },
   });
+
+  const categoryRows = await prisma.category.findMany({ orderBy: { sortOrder: "asc" } });
+  const sizingTierRows = await prisma.sizingTier.findMany({ orderBy: { sortOrder: "asc" } });
+  const attributeKindRows = await prisma.attributeKind.findMany({ orderBy: { sortOrder: "asc" } });
 
   const batchRows = await prisma.batch.findMany({
     orderBy: { cutoffDate: "desc" },
@@ -96,7 +94,61 @@ export default async function AdminPage() {
       />
 
       <div className="mx-auto max-w-5xl space-y-12 px-4">
-        <AdminProducts products={allProducts} />
+        <AdminProducts
+          products={allProducts.map((p) => ({
+            id: p.id,
+            slug: p.slug,
+            name: p.name,
+            description: p.description,
+            category: p.category,
+            sizingTier: p.sizingTier,
+            specs: p.specs,
+            badge: p.badge,
+            imageUrl: p.imageUrl,
+            configurable: p.configurable,
+            priceCents: p.priceCents,
+            inStock: p.inStock,
+            preorder: p.preorder,
+            active: p.active,
+            fixedFlex: p.fixedFlex,
+            fixedCurve: p.fixedCurve,
+            fixedHand: p.fixedHand,
+            fixedColor: p.fixedColor,
+            fixedLength: p.fixedLength,
+            hasOrders: p._count.orderItems > 0,
+          }))}
+          categories={categoryRows.map((c) => c.key)}
+          sizingTiers={sizingTierRows.map((t) => t.key)}
+        />
+        <AdminCategories
+          categories={categoryRows.map((c) => ({
+            id: c.id,
+            key: c.key,
+            label: c.label,
+            sortOrder: c.sortOrder,
+            active: c.active,
+          }))}
+        />
+        <AdminSizingTiers
+          tiers={sizingTierRows.map((t) => ({
+            id: t.id,
+            key: t.key,
+            label: t.label,
+            tag: t.tag,
+            sortOrder: t.sortOrder,
+            active: t.active,
+          }))}
+        />
+        <AdminAttributeKinds
+          kinds={attributeKindRows.map((k) => ({
+            id: k.id,
+            key: k.key,
+            label: k.label,
+            unit: k.unit,
+            sortOrder: k.sortOrder,
+            active: k.active,
+          }))}
+        />
         <AdminOptions
           options={optionValues.map((o) => ({
             id: o.id,
@@ -110,6 +162,9 @@ export default async function AdminPage() {
             sortOrder: o.sortOrder,
             active: o.active,
           }))}
+          kinds={attributeKindRows.filter((k) => k.active).map((k) => k.key)}
+          sizings={["ALL", ...sizingTierRows.filter((t) => t.active).map((t) => t.key)]}
+          categories={["ALL", ...categoryRows.filter((c) => c.active).map((c) => c.key)]}
         />
         <AdminCoupons
           coupons={coupons.map((c) => ({

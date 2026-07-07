@@ -18,7 +18,15 @@ export type CatalogItem = {
   slug: string;
   name: string;
   description: string;
-  category: "FULL_STICK" | "GOALIE" | "MINI_CLUB" | "MINI_FUN";
+  // Was a 4-value literal union; now a plain string. Category is admin-
+  // extensible (DB `Category` table, see prisma/schema.prisma) so new
+  // categories can be added with no code change — code that keys off a
+  // specific value (e.g. "GOALIE") still works fine via string equality.
+  category: string;
+  // SENIOR | INT | JR | YTH — explicit tier scope for configurable items,
+  // sourced from Product.sizingTier. Undefined on static-fallback items
+  // (falls back to slug-substring guessing via `sizingOf`, see below).
+  sizingTier?: string;
   priceCents: number;
   badge?: string;
   specs?: string[];
@@ -26,6 +34,19 @@ export type CatalogItem = {
   // Catalog-level "ships now, no batch wait" flag. Distinct from Prisma's
   // Product.inStock (on-hand unit count) — this is a display/grouping flag.
   inStock?: boolean;
+};
+
+// Minimal non-empty-looking shell so a DB product with `configurable: true`
+// but no static CATALOG counterpart still gets an `options` object (and so
+// `withDbOptions` doesn't bail out before overlaying the real OptionValue
+// rows). Never shown to a shopper as-is — see lib/options.ts guard.
+export const EMPTY_OPTIONS: StickOptions = {
+  flex: [],
+  curve: [],
+  hand: [],
+  colors: [],
+  colorUpchargeCents: 1000,
+  nameUpchargeCents: 1000,
 };
 
 export const COLORS = [

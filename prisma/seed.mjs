@@ -1,8 +1,49 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+// ---- Category / SizingTier / AttributeKind lookup tables ----
+// These replace the old Prisma enums (Category, OptionKind) and the
+// hardcoded SIZINGS array. Seeded once; admin can add/hide/relabel rows
+// from /admin from here on with zero code changes.
+const categories = [
+  { key: "FULL_STICK", label: "Full Stick", sortOrder: 0 },
+  { key: "GOALIE", label: "Goalie", sortOrder: 1 },
+  { key: "MINI_CLUB", label: "Mini Club", sortOrder: 2 },
+  { key: "MINI_FUN", label: "Mini Fun", sortOrder: 3 },
+];
+for (const c of categories) {
+  await prisma.category.upsert({ where: { key: c.key }, update: c, create: c });
+}
+
+const sizingTiers = [
+  { key: "SENIOR", label: "Senior", tag: "Adult & beer league", sortOrder: 0 },
+  { key: "INT", label: "Intermediate", tag: "Stepping up to full ice", sortOrder: 1 },
+  { key: "JR", label: "Junior", tag: "Growing players", sortOrder: 2 },
+  { key: "YTH", label: "Youth", tag: "Little rippers", sortOrder: 3 },
+];
+for (const t of sizingTiers) {
+  await prisma.sizingTier.upsert({ where: { key: t.key }, update: t, create: t });
+}
+
+const attributeKinds = [
+  { key: "FLEX", label: "Flex", unit: "", sortOrder: 0 },
+  { key: "CURVE", label: "Curve", unit: "", sortOrder: 1 },
+  { key: "HAND", label: "Hand", unit: "", sortOrder: 2 },
+  { key: "COLOR", label: "Color", unit: "", sortOrder: 3 },
+  { key: "LENGTH", label: "Length", unit: "\"", sortOrder: 4 },
+  { key: "PADDLE", label: "Paddle Size", unit: "\"", sortOrder: 5 },
+];
+for (const k of attributeKinds) {
+  await prisma.attributeKind.upsert({ where: { key: k.key }, update: k, create: k });
+}
+console.log(`Seeded ${categories.length} categories, ${sizingTiers.length} sizing tiers, ${attributeKinds.length} attribute kinds.`);
+
 // Retail prices ~40% margin over manufacturer quote (landed cost incl. freight share).
 // Slugs/prices/categories mirror lib/catalog.ts — keep them in sync.
+// `configurable: true` = storefront builds the flex/curve/hand/color/length
+// picker from OptionValue rows scoped by category+sizingTier (see
+// lib/options.ts). `specs`/`badge` mirror the static fixture but are now
+// admin-editable — DB values win once seeded.
 const products = [
   // ---- SENIOR: Elite / Performance / Value ----
   {
@@ -10,6 +51,10 @@ const products = [
     name: "Elite Senior Stick",
     description: "315g T1100 carbon + boron, 24K weave. Our lightest build.",
     category: "FULL_STICK",
+    sizingTier: "SENIOR",
+    configurable: true,
+    badge: "Top Shelf",
+    specs: ["315g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick"],
     priceCents: 11900,
     preorder: true,
   },
@@ -18,6 +63,10 @@ const products = [
     name: "Performance Senior Stick",
     description: "350g full carbon, 18K weave. The workhorse.",
     category: "FULL_STICK",
+    sizingTier: "SENIOR",
+    configurable: true,
+    badge: "Best Seller",
+    specs: ["350g", "T1100/T800 carbon", "18K weave", "Mid kick"],
     priceCents: 9900,
     preorder: true,
   },
@@ -26,6 +75,10 @@ const products = [
     name: "Value Senior Stick",
     description: "425g full carbon, 18K weave. Budget-friendly backup.",
     category: "FULL_STICK",
+    sizingTier: "SENIOR",
+    configurable: true,
+    badge: "Best Value",
+    specs: ["425g", "T700 carbon", "18K weave", "Mid kick"],
     priceCents: 7900,
     preorder: true,
   },
@@ -36,6 +89,10 @@ const products = [
     name: "Elite Intermediate Stick",
     description: "315g T1100 + boron carbon, 24K weave. INT sizing.",
     category: "FULL_STICK",
+    sizingTier: "INT",
+    configurable: true,
+    badge: "Top Shelf",
+    specs: ["315g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick", "INT sizing"],
     priceCents: 10900,
     preorder: true,
   },
@@ -44,6 +101,10 @@ const products = [
     name: "Performance Intermediate Stick",
     description: "335g full carbon, 18K weave. INT sizing.",
     category: "FULL_STICK",
+    sizingTier: "INT",
+    configurable: true,
+    badge: "Best Seller",
+    specs: ["335g", "T1100/T800 carbon", "18K weave", "Mid kick", "INT sizing"],
     priceCents: 8900,
     preorder: true,
   },
@@ -52,6 +113,10 @@ const products = [
     name: "Value Intermediate Stick",
     description: "370g full carbon, 18K weave. INT sizing.",
     category: "FULL_STICK",
+    sizingTier: "INT",
+    configurable: true,
+    badge: "Best Value",
+    specs: ["370g", "T700 carbon", "18K weave", "Mid kick", "INT sizing"],
     priceCents: 6900,
     preorder: true,
   },
@@ -62,6 +127,10 @@ const products = [
     name: "Elite Junior Stick",
     description: "295g full carbon, 24K weave. JR sizing.",
     category: "FULL_STICK",
+    sizingTier: "JR",
+    configurable: true,
+    badge: "Top Shelf",
+    specs: ["295g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick", "JR sizing"],
     priceCents: 8900,
     preorder: true,
   },
@@ -70,6 +139,10 @@ const products = [
     name: "Performance Junior Stick",
     description: "315g full carbon, 18K weave. JR sizing.",
     category: "FULL_STICK",
+    sizingTier: "JR",
+    configurable: true,
+    badge: "Best Seller",
+    specs: ["315g", "T1100/T800 carbon", "18K weave", "Mid kick", "JR sizing"],
     priceCents: 6900,
     preorder: true,
   },
@@ -78,6 +151,10 @@ const products = [
     name: "Value Junior Stick",
     description: "345g full carbon, 18K weave. JR sizing.",
     category: "FULL_STICK",
+    sizingTier: "JR",
+    configurable: true,
+    badge: "Best Value",
+    specs: ["345g", "T700 carbon", "18K weave", "Mid kick", "JR sizing"],
     priceCents: 4900,
     preorder: true,
   },
@@ -88,6 +165,10 @@ const products = [
     name: "Elite Youth Stick",
     description: "215g full carbon, 24K weave. YTH sizing.",
     category: "FULL_STICK",
+    sizingTier: "YTH",
+    configurable: true,
+    badge: "Top Shelf",
+    specs: ["215g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick", "YTH sizing"],
     priceCents: 7900,
     preorder: true,
   },
@@ -96,6 +177,10 @@ const products = [
     name: "Performance Youth Stick",
     description: "245g full carbon, 18K weave. YTH sizing.",
     category: "FULL_STICK",
+    sizingTier: "YTH",
+    configurable: true,
+    badge: "Best Seller",
+    specs: ["245g", "T1100/T800 carbon", "18K weave", "Mid kick", "YTH sizing"],
     priceCents: 5900,
     preorder: true,
   },
@@ -104,16 +189,26 @@ const products = [
     name: "Value Youth Stick",
     description: "275g full carbon, 18K weave. YTH sizing.",
     category: "FULL_STICK",
+    sizingTier: "YTH",
+    configurable: true,
+    badge: "Best Value",
+    specs: ["275g", "T700 carbon", "18K weave", "Mid kick", "YTH sizing"],
     priceCents: 3900,
     preorder: true,
   },
 
   // ---- GOALIE: Elite / Performance / Value ----
+  // Goalie flex uses the SENIOR flex set (see lib/catalog.ts baseOpts), so
+  // sizingTier is SENIOR here too — matches current sizingOf() behavior.
   {
     slug: "elite-goalie-stick",
     name: "Elite Goalie Stick",
     description: "450g full carbon paddle, 24K weave, 24\"-30\" paddle.",
     category: "GOALIE",
+    sizingTier: "SENIOR",
+    configurable: true,
+    badge: "Top Shelf",
+    specs: ["450g", "T1100 + boron carbon", "24K weave", "24\"-30\" paddle"],
     priceCents: 14900,
     preorder: true,
   },
@@ -122,6 +217,10 @@ const products = [
     name: "Performance Goalie Stick",
     description: "480g full carbon paddle, 18K weave, 24\"-30\" paddle.",
     category: "GOALIE",
+    sizingTier: "SENIOR",
+    configurable: true,
+    badge: "Best Seller",
+    specs: ["480g", "T1100/T800 carbon", "18K weave", "24\"-30\" paddle"],
     priceCents: 12900,
     preorder: true,
   },
@@ -130,16 +229,24 @@ const products = [
     name: "Value Goalie Stick",
     description: "520g full carbon paddle, 18K weave, 24\"-30\" paddle.",
     category: "GOALIE",
+    sizingTier: "SENIOR",
+    configurable: true,
+    badge: "Best Value",
+    specs: ["520g", "T700 carbon", "18K weave", "24\"-30\" paddle"],
     priceCents: 10900,
     preorder: true,
   },
 
-  // ---- IN STOCK: fixed builds, ships now, no batch wait ----
+  // ---- IN STOCK: fixed builds, ships now, no batch wait (not configurable) ----
   {
     slug: "instock-senior-85-p92",
     name: "In-Stock Senior — 85 Flex / P92",
     description: "350g, 18K weave, 85 flex, P92 curve, right hand. On the shelf now.",
     category: "FULL_STICK",
+    sizingTier: "SENIOR",
+    configurable: false,
+    badge: "Ships Now",
+    specs: ["350g", "18K weave", "85 Flex", "P92 curve", "Right hand"],
     priceCents: 9900,
     inStock: 12,
     preorder: false,
@@ -149,6 +256,10 @@ const products = [
     name: "In-Stock Senior — 75 Flex / P28",
     description: "350g, 18K weave, 75 flex, P28 curve, right hand. On the shelf now.",
     category: "FULL_STICK",
+    sizingTier: "SENIOR",
+    configurable: false,
+    badge: "Ships Now",
+    specs: ["350g", "18K weave", "75 Flex", "P28 curve", "Right hand"],
     priceCents: 9900,
     inStock: 12,
     preorder: false,
@@ -158,17 +269,25 @@ const products = [
     name: "In-Stock Junior — 50 Flex / P92",
     description: "315g, 18K weave, 50 flex, P92 curve, right hand. On the shelf now.",
     category: "FULL_STICK",
+    sizingTier: "JR",
+    configurable: false,
+    badge: "Ships Now",
+    specs: ["315g", "18K weave", "50 Flex", "P92 curve", "Right hand"],
     priceCents: 6900,
     inStock: 15,
     preorder: false,
   },
 
-  // ---- MINI STICKS ----
+  // ---- MINI STICKS (not configurable) ----
   {
     slug: "club-custom-mini-stick",
     name: "Club Custom Mini Stick",
     description: "Club colors + logo on an 18\" mini stick.",
     category: "MINI_CLUB",
+    sizingTier: null,
+    configurable: false,
+    badge: "Club Favorite",
+    specs: [],
     priceCents: 2799,
     preorder: true,
   },
@@ -177,6 +296,10 @@ const products = [
     name: "Fun Series Mini Stick",
     description: "Wild graphics, loud colors.",
     category: "MINI_FUN",
+    sizingTier: null,
+    configurable: false,
+    badge: null,
+    specs: [],
     priceCents: 2799,
     preorder: true,
   },

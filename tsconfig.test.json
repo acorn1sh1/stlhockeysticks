@@ -6,7 +6,7 @@
   },
   "include": [
     "tests/**/*.ts",
-    "vitest.config.ts",
+    "vitest.config.mts",
     "playwright.config.ts",
     "next-env.d.ts"
   ],

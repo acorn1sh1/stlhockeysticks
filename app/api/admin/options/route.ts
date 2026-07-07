@@ -3,9 +3,21 @@ import { prisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin";
 import { invalidateOptionCache } from "@/lib/options";
 
-const KINDS = ["FLEX", "CURVE", "HAND", "COLOR", "LENGTH", "PADDLE"];
-const SIZINGS = ["ALL", "SENIOR", "INT", "JR", "YTH"];
-const CATEGORIES = ["ALL", "FULL_STICK", "GOALIE"];
+// Valid kinds/sizings/categories now come from the DB (AttributeKind,
+// SizingTier, Category tables) instead of hardcoded arrays, so admin can add
+// a brand-new attribute type or sizing tier and immediately use it here.
+async function validScopes() {
+  const [kinds, sizings, cats] = await Promise.all([
+    prisma.attributeKind.findMany({ where: { active: true }, select: { key: true } }),
+    prisma.sizingTier.findMany({ where: { active: true }, select: { key: true } }),
+    prisma.category.findMany({ where: { active: true }, select: { key: true } }),
+  ]);
+  return {
+    KINDS: kinds.map((k) => k.key),
+    SIZINGS: ["ALL", ...sizings.map((s) => s.key)],
+    CATEGORIES: ["ALL", ...cats.map((c) => c.key)],
+  };
+}
 
 // Create / update / deactivate a configurator option value.
 //  - id present            → patch (active, upcharge, default, label, sort)
@@ -42,6 +54,7 @@ export async function POST(req: Request) {
     }
 
     // Create
+    const { KINDS, SIZINGS, CATEGORIES } = await validScopes();
     const kind = String(b.kind ?? "");
     const value = String(b.value ?? "").trim();
     if (!KINDS.includes(kind) || !value) {
@@ -52,10 +65,10 @@ export async function POST(req: Request) {
     const upchargeCents = Math.max(0, Math.floor(Number(b.upchargeCents ?? 0)) || 0);
 
     await prisma.optionValue.upsert({
-      where: { kind_value_sizing_category: { kind: kind as never, value, sizing, category } },
+      where: { kind_value_sizing_category: { kind, value, sizing, category } },
       update: { active: true, upchargeCents },
       create: {
-        kind: kind as never,
+        kind,
         value,
         sizing,
         category,

@@ -16,10 +16,6 @@ export type OptionRow = {
   active: boolean;
 };
 
-const KINDS = ["FLEX", "CURVE", "HAND", "COLOR", "LENGTH", "PADDLE"];
-const SIZINGS = ["ALL", "SENIOR", "INT", "JR", "YTH"];
-const CATEGORIES = ["ALL", "FULL_STICK", "GOALIE"];
-
 async function post(body: unknown) {
   return fetch("/api/admin/options", {
     method: "POST",
@@ -28,11 +24,21 @@ async function post(body: unknown) {
   });
 }
 
-export default function AdminOptions({ options }: { options: OptionRow[] }) {
+export default function AdminOptions({
+  options,
+  kinds,
+  sizings,
+  categories,
+}: {
+  options: OptionRow[];
+  kinds: string[]; // AttributeKind keys, e.g. FLEX/CURVE/HAND/COLOR/LENGTH/PADDLE + anything admin added
+  sizings: string[]; // "ALL" + SizingTier keys
+  categories: string[]; // "ALL" + Category keys
+}) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
 
-  const byKind = KINDS.map((k) => ({
+  const byKind = kinds.map((k) => ({
     kind: k,
     rows: options.filter((o) => o.kind === k),
   })).filter((g) => g.rows.length);
@@ -56,6 +62,9 @@ export default function AdminOptions({ options }: { options: OptionRow[] }) {
 
       {adding && (
         <AddOption
+          kinds={kinds}
+          sizings={sizings}
+          categories={categories}
           onDone={() => {
             setAdding(false);
             router.refresh();
@@ -161,9 +170,19 @@ function OptionRowEditor({ row, onSaved }: { row: OptionRow; onSaved: () => void
   );
 }
 
-function AddOption({ onDone }: { onDone: () => void }) {
+function AddOption({
+  kinds,
+  sizings,
+  categories,
+  onDone,
+}: {
+  kinds: string[];
+  sizings: string[];
+  categories: string[];
+  onDone: () => void;
+}) {
   const [f, setF] = useState({
-    kind: "FLEX",
+    kind: kinds[0] ?? "",
     value: "",
     label: "",
     sizing: "ALL",
@@ -195,7 +214,7 @@ function AddOption({ onDone }: { onDone: () => void }) {
       <label className="text-sm">
         <span className="mb-1 block text-xs font-bold uppercase text-black/40">Kind</span>
         <select value={f.kind} onChange={(e) => set("kind", e.target.value)} className="w-full rounded-lg border border-black/20 px-3 py-2 text-sm">
-          {KINDS.map((k) => <option key={k} value={k}>{k}</option>)}
+          {kinds.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
       </label>
       <label className="text-sm">
@@ -209,13 +228,13 @@ function AddOption({ onDone }: { onDone: () => void }) {
       <label className="text-sm">
         <span className="mb-1 block text-xs font-bold uppercase text-black/40">Sizing scope</span>
         <select value={f.sizing} onChange={(e) => set("sizing", e.target.value)} className="w-full rounded-lg border border-black/20 px-3 py-2 text-sm">
-          {SIZINGS.map((s) => <option key={s} value={s}>{s}</option>)}
+          {sizings.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </label>
       <label className="text-sm">
         <span className="mb-1 block text-xs font-bold uppercase text-black/40">Category scope</span>
         <select value={f.category} onChange={(e) => set("category", e.target.value)} className="w-full rounded-lg border border-black/20 px-3 py-2 text-sm">
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
+          {categories.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
         </select>
       </label>
       <label className="text-sm">

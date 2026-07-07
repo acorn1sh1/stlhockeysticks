@@ -6,17 +6,17 @@ import { useCart } from "@/lib/cart";
 import { useState } from "react";
 import StickPhoto from "@/components/StickPhoto";
 
-const art: Record<CatalogItem["category"], string> = {
+// Category is admin-extensible (DB `Category` table) so this can no longer
+// be an exhaustive Record keyed by a literal union — fall back to the
+// FULL_STICK look for any category an admin adds beyond the original four.
+const art: Record<string, string> = {
   FULL_STICK: "from-zinc-800 to-zinc-600",
   GOALIE: "from-emerald-900 to-emerald-600",
   MINI_CLUB: "from-blue-900 to-blue-600",
   MINI_FUN: "from-fuchsia-700 to-orange-500",
 };
 
-const stickColor: Record<
-  CatalogItem["category"],
-  "carbon" | "goalie" | "club" | "fun"
-> = {
+const stickColor: Record<string, "carbon" | "goalie" | "club" | "fun"> = {
   FULL_STICK: "carbon",
   GOALIE: "goalie",
   MINI_CLUB: "club",
@@ -63,10 +63,10 @@ export default function ProductCard({
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white transition hover:shadow-xl">
       <div
-        className={`relative flex h-44 items-center justify-center bg-gradient-to-br ${art[item.category]}`}
+        className={`relative flex h-44 items-center justify-center bg-gradient-to-br ${art[item.category] ?? art.FULL_STICK}`}
       >
         <StickPhoto
-          colorway={stickColor[item.category]}
+          colorway={stickColor[item.category] ?? "carbon"}
           className="h-40 w-full drop-shadow-lg"
         />
         {badge && (

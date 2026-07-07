@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { validateCoupon } from "@/lib/coupons";
+import { clientKey, consumeRateLimit } from "@/lib/rateLimit";
 
 // Cart-side preview: given a code + current subtotal, return the discount.
 // Checkout re-validates independently, so this is purely for UX.
 export async function POST(req: Request) {
+  // Coupon codes are short, guessable strings — throttle so this preview
+  // endpoint can't be used to brute-force valid codes.
+  if (!consumeRateLimit(`coupon:${clientKey(req)}`, { windowMs: 5 * 60 * 1000, max: 20 })) {
+    return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429 });
+  }
+
   const { code, subtotalCents } = (await req.json().catch(() => ({}))) as {
     code?: string;
     subtotalCents?: number;

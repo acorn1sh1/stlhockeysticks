@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { clientKey, consumeRateLimit } from "@/lib/rateLimit";
 
 const WARRANTY_DAYS = 30;
 const MAX_PHOTOS = 5;
@@ -16,6 +17,15 @@ function b64Bytes(s: string) {
 type PhotoIn = { mimeType?: string; dataBase64?: string };
 
 export async function POST(req: Request) {
+  // Order/email lookup below is an enumeration surface, and photos are
+  // heavy (up to 5 x 8MB per claim) — throttle to block brute force + storage abuse.
+  if (!consumeRateLimit(`warranty:${clientKey(req)}`, { windowMs: 10 * 60 * 1000, max: 5 })) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please try again in a few minutes." },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 

@@ -1,5 +1,5 @@
 import { prisma } from "./db";
-import { sizingOf, type CatalogItem, type StickOptions, type SizingTier } from "./catalog";
+import { sizingOf, type CatalogItem, type StickOptions } from "./catalog";
 
 // Loads the admin-editable option catalog (OptionValue rows) and assembles
 // a StickOptions matrix for a given pre-order product. Options are scoped by
@@ -39,7 +39,7 @@ export function invalidateOptionCache() {
   cache = null;
 }
 
-const scoped = (rows: Row[], kind: string, tier: SizingTier, cat: string) =>
+const scoped = (rows: Row[], kind: string, tier: string, cat: string) =>
   rows.filter(
     (r) =>
       r.kind === kind &&
@@ -51,7 +51,10 @@ const firstDefault = (rows: Row[]) => rows.find((r) => r.isDefault)?.value;
 
 // Build the option matrix for one pre-order item from DB rows.
 export function optionsFromRows(item: CatalogItem, rows: Row[]): StickOptions {
-  const tier = sizingOf(item.slug);
+  // Prefer the explicit Product.sizingTier (set by admin / seed); fall back
+  // to the slug-substring guess only for static-fallback items that never
+  // got a DB row (offline mode, or a static CATALOG entry with no DB match).
+  const tier = item.sizingTier ?? sizingOf(item.slug);
   const cat = item.category;
   const isGoalie = cat === "GOALIE";
 

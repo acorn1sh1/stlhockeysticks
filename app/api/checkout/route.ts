@@ -12,11 +12,21 @@ import {
   type SelectedOptions,
 } from "@/lib/catalog";
 import { withDbOptions } from "@/lib/options";
+import { clientKey, consumeRateLimit } from "@/lib/rateLimit";
 
 // Creates a Clover Hosted Checkout session.
 // Server re-prices every line from the DB + catalog config —
 // client prices are never trusted.
 export async function POST(req: Request) {
+  // Each hit creates a DB order + calls the Clover API — throttle so this
+  // can't be used to spam orders or burn Clover API quota.
+  if (!consumeRateLimit(`checkout:${clientKey(req)}`, { windowMs: 10 * 60 * 1000, max: 15 })) {
+    return NextResponse.json(
+      { error: "Too many checkout attempts. Please wait a few minutes and try again." },
+      { status: 429 }
+    );
+  }
+
   const body = (await req.json().catch(() => null)) as {
     email?: string;
     name?: string;

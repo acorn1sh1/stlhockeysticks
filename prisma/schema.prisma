@@ -31,7 +31,11 @@ model Product {
   slug        String   @unique
   name        String
   description String
-  category    Category
+  category    String   // was `enum Category`; now validated in the API layer against Category.key so admin can add new categories with no migration
+  sizingTier  String?  // SENIOR | INT | JR | YTH | null (goalie/minis have none); validated against SizingTier.key
+  specs       String[] @default([]) // admin-editable bullet specs, shown on product detail
+  badge       String?  // e.g. "Best Seller" — admin-editable, was code-only
+  configurable Boolean @default(false) // true = build the flex/curve/hand/color/length matrix from OptionValue at render time, even if this slug isn't in the static lib/catalog.ts fixture
   type        ProductType @default(PREORDER) // PREORDER = configurable; IN_STOCK = fixed SKU
   priceCents  Int
   imageUrl    String?
@@ -50,16 +54,54 @@ model Product {
 }
 
 // Two catalogs: built-to-order (configurable) vs on-the-shelf (fixed SKU).
+// Kept as a real enum on purpose — it's a structural fork that checkout/cart
+// branch on, not a catalog value admin should be adding more of.
 enum ProductType {
   PREORDER
   IN_STOCK
 }
 
-enum Category {
-  FULL_STICK
-  GOALIE
-  MINI_CLUB
-  MINI_FUN
+// Admin-editable product category catalog. Replaces the old `enum Category`
+// (FULL_STICK/GOALIE/MINI_CLUB/MINI_FUN are now seeded rows, not enum members)
+// so a new category can be added from /admin with no schema migration.
+model Category {
+  id        String   @id @default(cuid())
+  key       String   @unique // e.g. "FULL_STICK" — stored on Product.category
+  label     String
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// Admin-editable sizing tier catalog (Senior/Int/Jr/Youth). Scopes FLEX and
+// LENGTH OptionValue rows and Product.sizingTier. Note: the dedicated
+// marketing pages at /sticks/{tier} are still literal Next.js routes (one
+// folder per tier) — adding a brand-new tier here makes it a valid scope for
+// options/products immediately, but a new landing page route is still a
+// small code change. Existing tiers (senior/intermediate/junior/youth) need
+// no code changes to relabel, hide, or reorder.
+model SizingTier {
+  id        String   @id @default(cuid())
+  key       String   @unique // "SENIOR" | "INT" | "JR" | "YTH"
+  label     String
+  tag       String   @default("") // short marketing blurb (was hardcoded in lib/sizeTiers.ts)
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// Admin-editable attribute type catalog. Replaces the old `enum OptionKind`
+// (FLEX/CURVE/HAND/COLOR/LENGTH/PADDLE are now seeded rows) so a brand-new
+// attribute (e.g. "GRIP") can be added from /admin with no migration — it
+// immediately becomes selectable in the Pre-Order Options editor.
+model AttributeKind {
+  id        String   @id @default(cuid())
+  key       String   @unique // e.g. "FLEX" — stored on OptionValue.kind
+  label     String
+  unit      String   @default("") // e.g. `"` for length, shown after the value
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
 
 // Admin-editable option catalog for the pre-order configurator.
@@ -70,7 +112,7 @@ enum Category {
 // compound unique index dedupes correctly on Postgres.)
 model OptionValue {
   id            String     @id @default(cuid())
-  kind          OptionKind
+  kind          String     // was `enum OptionKind`; now validated against AttributeKind.key
   value         String // canonical stored value, e.g. "P92", "85", "Right", "Black", "57\""
   label         String? // display override; falls back to value
   sizing        String     @default("ALL") // SENIOR | INT | JR | YTH | ALL
@@ -82,15 +124,6 @@ model OptionValue {
   createdAt     DateTime   @default(now())
 
   @@unique([kind, value, sizing, category])
-}
-
-enum OptionKind {
-  FLEX
-  CURVE
-  HAND
-  COLOR
-  LENGTH
-  PADDLE
 }
 
 model Order {

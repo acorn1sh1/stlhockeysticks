@@ -6,7 +6,26 @@ import tsconfigPaths from "vite-tsconfig-paths";
 //   api  — route handlers in app/api/**, Prisma + Clover mocked
 // Both run in the node environment (these paths never touch the DOM).
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  // vite-tsconfig-paths matches each imported file against whichever
+  // tsconfig's own `include` covers it — the two aren't merged, so both
+  // need to be listed explicitly (setting `projects` disables the
+  // plugin's directory-crawling auto-discovery entirely, so leaving either
+  // one out means files it's meant to cover silently stop resolving `@/*`):
+  //   - tsconfig.json: everything except tests/ (app/**, lib/**, components/**)
+  //   - tsconfig.test.json: tests/** (extends root for the `@/*` mapping,
+  //     but its own `include` replaces root's rather than adding to it —
+  //     that's why tests/ needs its own entry here at all)
+  plugins: [tsconfigPaths({ projects: ["tsconfig.json", "tsconfig.test.json"] })],
+  // Tests never import CSS. Without this, Vite auto-discovers
+  // postcss.config.mjs and chokes on it: that file uses Tailwind's
+  // documented Next.js format (`plugins: ["@tailwindcss/postcss"]`,
+  // plugin names as strings, resolved by Next's own postcss-loader) but
+  // Vite's lightweight loader expects actual plugin instances, not
+  // strings. Leave the real postcss.config.mjs untouched for the Next.js
+  // build and just skip postcss discovery for the test run.
+  css: {
+    postcss: {},
+  },
   test: {
     globals: true,
     projects: [

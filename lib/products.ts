@@ -1,57 +1,49 @@
 import { prisma } from "./db";
-import { CATALOG, type CatalogItem } from "./catalog";
+import { CATALOG, EMPTY_OPTIONS, type CatalogItem } from "./catalog";
 import { withDbOptions } from "./options";
 
-// The static CATALOG owns option matrices (flex/curve/colors/upcharges),
-// specs, and badges — the stuff that rarely changes. The DB Product table
-// owns the editable commercial fields: name, description, price, active,
-// and stock. This merges them so admin edits (price, add/remove product)
-// show up on the storefront, while the configurable option sets stay
-// code-defined. On any DB failure we fall back to the static catalog so
-// the storefront never goes dark.
+// DB `Product` rows are the runtime source of truth for the full product
+// list — admin can add/hide/edit any product (preorder or in-stock) with no
+// code change. The static CATALOG in ./catalog.ts is now only a seed
+// fixture + offline fallback (used verbatim only if the DB is completely
+// unreachable, so the storefront never goes dark).
+//
+// A product with `configurable: true` gets an `options` shell here (real
+// values are filled in per-request by `withDbOptions`, scoped against
+// OptionValue by category + sizingTier) — this works identically whether
+// the product's slug exists in the static CATALOG or was created purely
+// through /admin, which is what makes "add a new pre-order stick with zero
+// code changes" actually work end to end.
 export async function getMergedCatalog(): Promise<CatalogItem[]> {
   let dbProducts;
   try {
-    dbProducts = await prisma.product.findMany({ where: { active: true } });
+    dbProducts = await prisma.product.findMany({
+      where: { active: true },
+      orderBy: { createdAt: "asc" },
+    });
   } catch (e) {
     console.error("getMergedCatalog DB error — falling back to static catalog", e);
     return CATALOG;
   }
   if (!dbProducts.length) return CATALOG;
 
-  const bySlug = new Map(dbProducts.map((p) => [p.slug, p]));
-  const merged: CatalogItem[] = [];
+  const staticBySlug = new Map(CATALOG.map((c) => [c.slug, c]));
 
-  // Known catalog items first (preserves ordering + option config).
-  for (const c of CATALOG) {
-    const db = bySlug.get(c.slug);
-    if (!db) continue; // deactivated in DB → hide
-    merged.push({
-      ...c,
-      name: db.name,
-      description: db.description,
-      priceCents: db.priceCents,
-      category: db.category as CatalogItem["category"],
-    });
-    bySlug.delete(c.slug);
-  }
-
-  // Remaining = products added via /admin that aren't in the static catalog.
-  // These are simple (non-configurable) SKUs. If they carry real inventory
-  // (preorder = false) treat them as ships-now so they read live stock.
-  for (const db of bySlug.values()) {
-    merged.push({
+  return dbProducts.map((db): CatalogItem => {
+    const staticItem = staticBySlug.get(db.slug);
+    return {
       slug: db.slug,
       name: db.name,
       description: db.description,
-      category: db.category as CatalogItem["category"],
+      category: db.category,
+      sizingTier: db.sizingTier ?? undefined,
       priceCents: db.priceCents,
-      inStock: db.preorder === false ? true : undefined,
-      badge: db.preorder === false ? "Ships Now" : undefined,
-    });
-  }
-
-  return merged;
+      specs: db.specs?.length ? db.specs : staticItem?.specs,
+      badge: db.badge ?? staticItem?.badge ?? (db.type === "IN_STOCK" ? "Ships Now" : undefined),
+      options: db.configurable ? staticItem?.options ?? EMPTY_OPTIONS : undefined,
+      inStock: db.type === "IN_STOCK" ? true : undefined,
+    };
+  });
 }
 
 export async function getMergedItem(slug: string): Promise<CatalogItem | undefined> {

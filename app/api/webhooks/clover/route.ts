@@ -1,20 +1,50 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { decrementForOrder } from "@/lib/inventory";
+import { verifyCloverSignature } from "@/lib/cloverWebhook";
 
 // Clover webhook receiver.
 // Configure in Clover dashboard -> webhooks, point at
 // https://stlhockeysticks.com/api/webhooks/clover
 // Clover sends a verification code on first setup — check logs for it.
+//
+// Set CLOVER_WEBHOOK_SECRET to the Signing Secret shown on that same
+// dashboard page (Ecommerce > Hosted Checkout > Webhook). Without it every
+// request here is trusted blindly, which lets anyone forge a "paid" event.
 export async function POST(req: Request) {
-  const payload = await req.json().catch(() => null);
-  console.log("clover webhook", JSON.stringify(payload));
+  const rawBody = await req.text();
+  const payload = (() => {
+    try {
+      return JSON.parse(rawBody);
+    } catch {
+      return null;
+    }
+  })();
 
-  // First-time verification handshake
+  const secret = process.env.CLOVER_WEBHOOK_SECRET;
+  const sigHeader = req.headers.get("clover-signature");
+  const signatureValid = !!secret && verifyCloverSignature(rawBody, sigHeader, secret);
+
+  // First-time verification handshake: harmless (no state change), and
+  // Clover may ping this before/while the signing secret is being set up,
+  // so accept it even if unsigned — just don't trust it for anything else.
   if (payload?.verificationCode) {
     console.log("CLOVER VERIFICATION CODE:", payload.verificationCode);
     return NextResponse.json({ ok: true });
   }
+
+  if (!secret) {
+    console.error(
+      "clover webhook rejected: CLOVER_WEBHOOK_SECRET not set — refusing to trust unsigned payment events"
+    );
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+  if (!signatureValid) {
+    console.error("clover webhook rejected: invalid or missing Clover-Signature");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
+
+  console.log("clover webhook", JSON.stringify(payload));
 
   // Payment events: mark matching order paid.
   // Clover hosted checkout events carry the checkoutSessionId in merchants[].objectId

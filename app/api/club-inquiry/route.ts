@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { clientKey, consumeRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: Request) {
+  if (!consumeRateLimit(`club-inquiry:${clientKey(req)}`, { windowMs: 10 * 60 * 1000, max: 5 })) {
+    return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429 });
+  }
+
   const body = await req.json().catch(() => null);
   if (!body?.clubName || !body?.email || !body?.contact || !body?.message) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
