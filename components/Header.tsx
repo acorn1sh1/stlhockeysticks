@@ -7,6 +7,7 @@ import { LogoLink } from "@/components/Logo";
 
 const nav = [
   { href: "/sticks", label: "Full Sticks" },
+  { href: "/sticks/in-stock", label: "In Stock" },
   { href: "/mini-sticks", label: "Mini Sticks" },
   { href: "/clubs", label: "For Clubs" },
   { href: "/how-it-works", label: "How It Works" },

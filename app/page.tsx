@@ -59,7 +59,7 @@ export default async function Home() {
                 Shop Full Sticks
               </Link>
               <Link
-                href="/sticks#in-stock"
+                href="/sticks/in-stock"
                 className="rounded-full border border-paper/30 px-7 py-3 font-bold transition hover:border-volt hover:text-volt"
               >
                 Pick Up Now →
@@ -137,7 +137,7 @@ export default async function Home() {
                   Built and in hand today. No batch wait — grab it and go.
                 </p>
               </div>
-              <Link href="/sticks#in-stock" className="text-sm font-bold text-volt-dark hover:underline">
+              <Link href="/sticks/in-stock" className="text-sm font-bold text-volt-dark hover:underline">
                 See all in-stock →
               </Link>
             </div>

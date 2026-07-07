@@ -155,11 +155,16 @@ model Coupon {
   id               String   @id @default(cuid())
   code             String   @unique // stored uppercase
   kind             CouponKind
-  value            Int // PERCENT: 1-100 ; FIXED: cents off
+  value            Int // PERCENT: 1-100 ; FIXED: cents off ; TIERED_PERCENT: unused (see `tiers`)
+  // TIERED_PERCENT only: quantity breakpoints, e.g.
+  // [{"minQty":2,"percent":10},{"minQty":5,"percent":20},{"minQty":10,"percent":25}]
+  // — the highest tier whose minQty <= cart quantity applies.
+  tiers            Json?
   active           Boolean  @default(true)
   minSubtotalCents Int      @default(0) // order must reach this (pre-coupon) to qualify
   maxRedemptions   Int? // null = unlimited
   timesRedeemed    Int      @default(0)
+  startsAt         DateTime? // null = active immediately
   expiresAt        DateTime?
   orders           Order[]
   createdAt        DateTime @default(now())
@@ -168,6 +173,7 @@ model Coupon {
 enum CouponKind {
   PERCENT
   FIXED
+  TIERED_PERCENT // quantity-based: e.g. buy 2-4 get 10%, 5-9 get 20%, 10+ get 25%
 }
 
 enum OrderStatus {

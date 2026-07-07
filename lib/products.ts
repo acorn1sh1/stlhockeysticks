@@ -42,6 +42,20 @@ export async function getMergedCatalog(): Promise<CatalogItem[]> {
       badge: db.badge ?? staticItem?.badge ?? (db.type === "IN_STOCK" ? "Pick Up Now" : undefined),
       options: db.configurable ? staticItem?.options ?? EMPTY_OPTIONS : undefined,
       inStock: db.type === "IN_STOCK" ? true : undefined,
+      // Surface the locked build + live count for in-stock SKUs so the
+      // in-stock listing can sort/filter on them. Only meaningful for
+      // IN_STOCK; left undefined for pre-order items.
+      fixed:
+        db.type === "IN_STOCK"
+          ? {
+              flex: db.fixedFlex ?? undefined,
+              curve: db.fixedCurve ?? undefined,
+              hand: db.fixedHand ?? undefined,
+              color: db.fixedColor ?? undefined,
+              length: db.fixedLength ?? undefined,
+            }
+          : undefined,
+      stockCount: db.type === "IN_STOCK" ? db.inStock : undefined,
     };
   });
 }

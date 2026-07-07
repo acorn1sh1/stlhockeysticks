@@ -34,6 +34,19 @@ export type CatalogItem = {
   // Catalog-level "ships now, no batch wait" flag. Distinct from Prisma's
   // Product.inStock (on-hand unit count) — this is a display/grouping flag.
   inStock?: boolean;
+  // Locked build for IN_STOCK SKUs, surfaced from Product.fixed* so the
+  // in-stock listing can sort/filter on real per-SKU attributes. Undefined
+  // on pre-order (built-to-order) items.
+  fixed?: {
+    flex?: number;
+    curve?: string;
+    hand?: string;
+    color?: string;
+    length?: string;
+  };
+  // On-hand unit count (Product.inStock) for IN_STOCK SKUs — used for the
+  // "only X left" cue and availability sort/filter. Undefined otherwise.
+  stockCount?: number;
 };
 
 // Minimal non-empty-looking shell so a DB product with `configurable: true`

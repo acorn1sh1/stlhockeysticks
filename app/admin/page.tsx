@@ -173,10 +173,12 @@ export default async function AdminPage() {
             code: c.code,
             kind: c.kind,
             value: c.value,
+            tiers: (c.tiers as { minQty: number; percent: number }[] | null) ?? null,
             active: c.active,
             minSubtotalCents: c.minSubtotalCents,
             maxRedemptions: c.maxRedemptions,
             timesRedeemed: c.timesRedeemed,
+            startsAt: c.startsAt ? c.startsAt.toISOString() : null,
             expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
           }))}
         />

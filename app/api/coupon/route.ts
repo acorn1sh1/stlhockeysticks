@@ -11,15 +11,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429 });
   }
 
-  const { code, subtotalCents } = (await req.json().catch(() => ({}))) as {
+  const { code, subtotalCents, quantity } = (await req.json().catch(() => ({}))) as {
     code?: string;
     subtotalCents?: number;
+    quantity?: number;
   };
   const subtotal = Math.max(0, Math.floor(Number(subtotalCents)));
   if (!code || !Number.isFinite(subtotal)) {
     return NextResponse.json({ error: "Missing code or subtotal." }, { status: 400 });
   }
-  const result = await validateCoupon(code, subtotal);
+  const qty = Number.isFinite(Number(quantity)) && Number(quantity) > 0 ? Math.floor(Number(quantity)) : 1;
+  const result = await validateCoupon(code, subtotal, qty);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

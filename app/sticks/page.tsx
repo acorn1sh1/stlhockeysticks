@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import BatchBanner from "@/components/BatchBanner";
-import { getStockMap } from "@/lib/inventory";
 import { getMergedCatalog } from "@/lib/products";
 
 export const metadata: Metadata = {
@@ -14,12 +13,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function SticksPage() {
-  const [stockMap, catalog] = await Promise.all([
-    getStockMap(),
-    getMergedCatalog(),
-  ]);
+  const catalog = await getMergedCatalog();
   const configurable = catalog.filter((c) => c.options);
-  const inStock = catalog.filter((c) => c.inStock);
+  const hasInStock = catalog.some((c) => c.inStock);
   const senior = configurable.filter((c) => c.slug.includes("senior"));
   const intermediate = configurable.filter((c) => c.slug.includes("intermediate"));
   const junior = configurable.filter((c) => c.slug.includes("junior"));
@@ -34,26 +30,16 @@ export default async function SticksPage() {
         <p className="mt-2 max-w-2xl text-black/60">
           Every custom stick is built to order: pick your flex, curve, hand,
           color — even get your name printed on the shaft. Pre-order into
-          this month&apos;s batch, pick up in STL. Need one tonight? Check the
-          In Stock lineup below — no batch wait.
+          this month&apos;s batch, pick up in STL.{" "}
+          {hasInStock && (
+            <>
+              Need one tonight?{" "}
+              <Link href="/sticks/in-stock" className="font-bold text-volt-dark hover:underline">
+                Shop what&apos;s in stock →
+              </Link>
+            </>
+          )}
         </p>
-
-        {inStock.length > 0 && (
-          <>
-            <h2 id="in-stock" className="mt-10 scroll-mt-24 text-2xl font-black">
-              In Stock <span className="text-volt-dark">— Pick Up Now</span>
-            </h2>
-            <div className="mt-4 grid gap-6 md:grid-cols-3">
-              {inStock.map((item) => (
-                <ProductCard
-                  key={item.slug}
-                  item={item}
-                  stock={stockMap[item.slug]?.inStock ?? 0}
-                />
-              ))}
-            </div>
-          </>
-        )}
 
         <div id="senior" className="mt-12 flex scroll-mt-24 flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">

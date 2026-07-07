@@ -6,7 +6,7 @@ import { useCart } from "@/lib/cart";
 import { clubDiscountCents, fmtPrice, nextBatch, optionsSummary } from "@/lib/catalog";
 
 export default function CartPage() {
-  const { lines, setQty, remove, subtotalCents } = useCart();
+  const { lines, setQty, remove, subtotalCents, count } = useCart();
   const discountCents = clubDiscountCents(lines);
   const afterClubCents = subtotalCents - discountCents;
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
@@ -30,7 +30,7 @@ export default function CartPage() {
     const res = await fetch("/api/coupon", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: couponInput, subtotalCents: afterClubCents }),
+      body: JSON.stringify({ code: couponInput, subtotalCents: afterClubCents, quantity: count }),
     });
     const data = await res.json().catch(() => ({}));
     setCouponBusy(false);

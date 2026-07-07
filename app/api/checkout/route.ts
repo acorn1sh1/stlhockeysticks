@@ -110,7 +110,8 @@ export async function POST(req: Request) {
   let couponCode: string | null = null;
   let couponDiscountCents = 0;
   if (body.couponCode?.trim()) {
-    const res = await validateCoupon(body.couponCode, afterClub);
+    const totalQty = lines.reduce((n, l) => n + l.quantity, 0);
+    const res = await validateCoupon(body.couponCode, afterClub, totalQty);
     if (!res.ok) {
       return NextResponse.json({ error: res.error }, { status: 400 });
     }
