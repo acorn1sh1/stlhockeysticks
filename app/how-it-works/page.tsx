@@ -15,7 +15,7 @@ const faqs = [
   },
   {
     q: "When do I get my sticks?",
-    a: "Pre-orders lock on the 1st of each month. The batch usually lands in St. Louis about 2 weeks later. We email you the second your order's ready for pickup. Need something sooner? Check the In Stock lineup — those ship with no batch wait.",
+    a: "Pre-orders lock on the 1st of each month. The batch takes about a month to manufacture, then roughly 2 weeks to ship to St. Louis — about 6 weeks total. We email you the second your order's ready for pickup. Need something sooner? Check the In Stock lineup — those ship with no batch wait.",
   },
   {
     q: "Where is pickup?",
@@ -46,7 +46,8 @@ export default function HowItWorks() {
           {[
             ["Order online", "Add sticks to your cart and check out securely with Clover. In-stock items are ready now; pre-order items join the current monthly batch."],
             ["We place one big order", "On the 1st of each month, all pre-orders combine into a single bulk factory order. That volume is what gets you wholesale pricing."],
-            ["The batch lands in STL", "Roughly 2 weeks later, the shipment arrives. We inspect every stick before it goes out."],
+            ["Sticks get built", "Manufacturing takes about a month — real construction, not a rush job."],
+            ["The batch lands in STL", "Roughly 2 weeks after that, the shipment arrives. We inspect every stick before it goes out."],
             ["You pick up locally", "We email your pickup window. Swing by, grab your sticks, save the shipping money."],
           ].map(([t, d], i) => (
             <li key={t} className="flex gap-4">

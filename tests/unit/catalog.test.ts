@@ -167,8 +167,12 @@ describe("nextBatch", () => {
     expect(b.cutoff.getMonth()).toBe(7); // August (0-indexed)
     expect(b.cutoff.getDate()).toBe(1);
     expect(b.daysLeft).toBeGreaterThan(0);
-    // Pickup window is 14-18 days after cutoff.
-    const days = (d: Date) => Math.round((d.getTime() - b.cutoff.getTime()) / 86400000);
+    // Manufacturing takes 1 month after cutoff.
+    expect(b.manufactureDone.getFullYear()).toBe(b.cutoff.getFullYear());
+    expect(b.manufactureDone.getMonth()).toBe(b.cutoff.getMonth() + 1); // September
+    expect(b.manufactureDone.getDate()).toBe(1);
+    // Pickup window is 14-18 days after manufacturing completes.
+    const days = (d: Date) => Math.round((d.getTime() - b.manufactureDone.getTime()) / 86400000);
     expect(days(b.pickupStart)).toBe(14);
     expect(days(b.pickupEnd)).toBe(18);
   });

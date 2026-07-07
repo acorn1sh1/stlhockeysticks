@@ -356,18 +356,28 @@ export function optionsSummary(sel?: SelectedOptions) {
 }
 
 // Monthly batch logic (display only — real batches live in DB)
-// Cutoff is always the 1st of next month. Allow ~2 weeks for shipping,
-// so pickup is estimated 14-18 days after cutoff.
+// Cutoff is always the 1st of next month (computed live off `now`, so this
+// rolls forward automatically — never hardcode a date here). After cutoff:
+// 1 month to manufacture, then ~2 weeks to ship, giving a pickup window.
 export function nextBatch() {
   const now = new Date();
   const cutoff = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const pickupStart = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate() + 14);
-  const pickupEnd = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate() + 18);
+  const manufactureDone = new Date(cutoff.getFullYear(), cutoff.getMonth() + 1, cutoff.getDate());
+  const pickupStart = new Date(
+    manufactureDone.getFullYear(),
+    manufactureDone.getMonth(),
+    manufactureDone.getDate() + 14
+  );
+  const pickupEnd = new Date(
+    manufactureDone.getFullYear(),
+    manufactureDone.getMonth(),
+    manufactureDone.getDate() + 18
+  );
   const daysLeft = Math.max(
     0,
     Math.ceil((cutoff.getTime() - now.getTime()) / 86400000)
   );
-  return { cutoff, pickupStart, pickupEnd, daysLeft };
+  return { cutoff, manufactureDone, pickupStart, pickupEnd, daysLeft };
 }
 
 // Club bulk incentive: 10% donated back to the team once a club order
