@@ -98,17 +98,17 @@ export default function ProductCard({
             Out of on-hand stock — order now and it ships with the next monthly batch.
           </p>
         )}
-        <div className="mt-4 flex flex-1 items-end justify-between gap-2">
+        <div className="mt-4 flex flex-1 flex-col justify-end gap-3">
           <span className="text-xl font-black">{fmtPrice(item.priceCents)}</span>
           {configurable ? (
             <Link
               href={`/sticks/${item.slug}`}
-              className="rounded-full bg-ink px-5 py-2 text-sm font-bold text-paper transition hover:bg-ink/80"
+              className="self-start rounded-full bg-ink px-5 py-2 text-sm font-bold text-paper transition hover:bg-ink/80"
             >
               Customize →
             </Link>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               {canPickQty && (
                 <div className="flex items-center gap-1">
                   <button
@@ -130,7 +130,7 @@ export default function ProductCard({
               )}
               <button
                 onClick={onAdd}
-                className={`shrink-0 rounded-full px-5 py-2 text-sm font-bold transition ${
+                className={`shrink-0 whitespace-nowrap rounded-full px-5 py-2 text-sm font-bold transition ${
                   added ? "bg-volt text-ink" : "bg-ink text-paper hover:bg-ink/80"
                 }`}
               >

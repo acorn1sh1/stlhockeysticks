@@ -86,10 +86,17 @@ export default async function Home() {
       <section className="mx-auto max-w-6xl px-4 py-16">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="text-3xl font-black tracking-tight">Shop by Size</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-3xl font-black tracking-tight">Shop by Size</h2>
+              <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-volt">
+                Pre-order — Next Batch
+              </span>
+            </div>
             <p className="mt-1 text-sm text-black/50">
               Every size comes in three builds — Elite, Performance, and Value.
-              Pick your player, then dial in flex, curve, and color.
+              Pick your player, then dial in flex, curve, and color. These are
+              built to order — reserve now and pick up with the next monthly
+              batch.
             </p>
           </div>
           <Link href="/sticks" className="text-sm font-bold text-volt-dark hover:underline">
