@@ -8,7 +8,19 @@
     "start": "next start",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
-    "db:seed": "node prisma/seed.mjs"
+    "db:seed": "node prisma/seed.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run --project unit --project api",
+    "test:watch": "vitest",
+    "test:unit": "vitest run --project unit",
+    "test:api": "vitest run --project api",
+    "test:cov": "vitest run --project unit --project api --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "test:a11y": "playwright test --grep @a11y",
+    "test:perf:lhci": "lhci autorun",
+    "test:perf:load": "k6 run tests/perf/coupon-load.js",
+    "test:all": "npm run typecheck && npm run test && npm run test:e2e"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.20.0",
@@ -18,12 +30,19 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@lhci/cli": "^0.14.0",
+    "@playwright/test": "^1.49.1",
     "@tailwindcss/postcss": "^4.1.8",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.8",
     "prisma": "^6.8.2",
     "tailwindcss": "^4.1.8",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^2.1.8"
   }
 }

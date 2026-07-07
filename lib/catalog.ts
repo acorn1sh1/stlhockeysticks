@@ -6,9 +6,12 @@ export type StickOptions = {
   curve: string[];
   hand: string[];
   colors: string[]; // first = standard (no upcharge)
+  length?: string[]; // 3 per tier (Senior/Int/Jr); omitted for goalie/youth
   colorUpchargeCents: number;
   nameUpchargeCents: number; // custom name printing on shaft
   paddleSize?: string[]; // goalie only
+  // Pre-selected defaults sourced from the option catalog (isDefault rows).
+  defaults?: Partial<{ flex: number; curve: string; hand: string; color: string; length: string; paddleSize: string }>;
 };
 
 export type CatalogItem = {
@@ -298,11 +301,21 @@ export const CATALOG: CatalogItem[] = [
 
 export const fmtPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
+// Sizing tier for scoping tier-specific option values (flex, length).
+export type SizingTier = "SENIOR" | "INT" | "JR" | "YTH";
+export function sizingOf(slug: string): SizingTier {
+  if (slug.includes("intermediate")) return "INT";
+  if (slug.includes("junior")) return "JR";
+  if (slug.includes("youth")) return "YTH";
+  return "SENIOR";
+}
+
 export type SelectedOptions = {
   flex?: string;
   curve?: string;
   hand?: string;
   color?: string;
+  length?: string;
   customName?: string;
   paddleSize?: string;
 };
@@ -330,6 +343,8 @@ export function validateOptions(
   if (!sel.curve || !o.curve.includes(sel.curve)) return "Invalid curve";
   if (!sel.hand || !o.hand.includes(sel.hand)) return "Invalid hand";
   if (sel.color && !o.colors.includes(sel.color)) return "Invalid color";
+  if (o.length && (!sel.length || !o.length.includes(sel.length)))
+    return "Invalid length";
   if (o.paddleSize && (!sel.paddleSize || !o.paddleSize.includes(sel.paddleSize)))
     return "Invalid paddle size";
   if (sel.customName && sel.customName.length > 20)
@@ -343,6 +358,7 @@ export function optionsSummary(sel?: SelectedOptions) {
     sel.flex && `${sel.flex} flex`,
     sel.curve,
     sel.hand,
+    sel.length && `${sel.length} length`,
     sel.paddleSize && `${sel.paddleSize} paddle`,
     sel.color && sel.color !== "Black" ? sel.color : null,
     sel.customName?.trim() ? `"${sel.customName.trim()}"` : null,

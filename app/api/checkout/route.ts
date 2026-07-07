@@ -11,6 +11,7 @@ import {
   validateOptions,
   type SelectedOptions,
 } from "@/lib/catalog";
+import { withDbOptions } from "@/lib/options";
 
 // Creates a Clover Hosted Checkout session.
 // Server re-prices every line from the DB + catalog config —
@@ -64,7 +65,10 @@ export async function POST(req: Request) {
       continue;
     }
 
-    const err = validateOptions(cat, l.options);
+    // Validate + price against the same admin-editable DB option matrix the
+    // configurator renders (includes length; falls back to static options).
+    const configured = await withDbOptions(cat);
+    const err = validateOptions(configured, l.options);
     if (err) {
       return NextResponse.json(
         { error: `${product.name}: ${err}` },
@@ -73,7 +77,7 @@ export async function POST(req: Request) {
     }
     // base price from DB, upcharges from catalog config
     const unitCents =
-      product.priceCents + (unitPriceCents(cat, l.options) - cat.priceCents);
+      product.priceCents + (unitPriceCents(configured, l.options) - configured.priceCents);
     const summary = optionsSummary(l.options);
     lines.push({
       product,

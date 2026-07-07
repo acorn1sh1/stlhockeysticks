@@ -42,8 +42,8 @@ export default function AdminProducts({ products }: { products: ProductRow[] }) 
       </div>
       <p className="mt-1 text-sm text-black/50">
         Prices here are what the storefront shows and what checkout charges.
-        Configurable sticks keep their flex/curve options from code; added
-        products are simple SKUs.
+        Pre-order sticks pull their flex/curve/hand/color/length choices from
+        the Pre-Order Options table below; added products are simple SKUs.
       </p>
 
       {adding && <AddProduct onDone={() => { setAdding(false); router.refresh(); }} />}

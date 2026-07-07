@@ -50,13 +50,25 @@ function OptionRow<T extends string | number>({
 export default function Configurator({ item }: { item: CatalogItem }) {
   const { add } = useCart();
   const o = item.options!;
-  const [flex, setFlex] = useState(o.flex[Math.floor(o.flex.length / 2)]);
-  const [curve, setCurve] = useState(o.curve[0]);
-  const [hand, setHand] = useState(o.hand[0]);
-  const [color, setColor] = useState(o.colors[0]);
+  const d = o.defaults ?? {};
+  const [flex, setFlex] = useState(
+    d.flex && o.flex.includes(d.flex) ? d.flex : o.flex[Math.floor(o.flex.length / 2)]
+  );
+  const [curve, setCurve] = useState(d.curve && o.curve.includes(d.curve) ? d.curve : o.curve[0]);
+  const [hand, setHand] = useState(d.hand && o.hand.includes(d.hand) ? d.hand : o.hand[0]);
+  const [color, setColor] = useState(
+    d.color && o.colors.includes(d.color) ? d.color : o.colors[0]
+  );
+  const [length, setLength] = useState(
+    o.length ? (d.length && o.length.includes(d.length) ? d.length : o.length[0]) : undefined
+  );
   const [customName, setCustomName] = useState("");
   const [paddleSize, setPaddleSize] = useState(
-    o.paddleSize?.[Math.floor(o.paddleSize.length / 2)]
+    o.paddleSize
+      ? d.paddleSize && o.paddleSize.includes(d.paddleSize)
+        ? d.paddleSize
+        : o.paddleSize[Math.floor(o.paddleSize.length / 2)]
+      : undefined
   );
   const [added, setAdded] = useState(false);
 
@@ -66,10 +78,11 @@ export default function Configurator({ item }: { item: CatalogItem }) {
       curve,
       hand,
       color,
+      length: o.length ? length : undefined,
       customName: customName.trim() || undefined,
       paddleSize: o.paddleSize ? paddleSize : undefined,
     }),
-    [flex, curve, hand, color, customName, paddleSize, o.paddleSize]
+    [flex, curve, hand, color, length, customName, paddleSize, o.paddleSize, o.length]
   );
 
   const price = unitPriceCents(item, sel);
@@ -85,6 +98,15 @@ export default function Configurator({ item }: { item: CatalogItem }) {
       <OptionRow label="Flex" values={o.flex} selected={flex} onSelect={setFlex} hint="Rule of thumb: half your body weight (lbs)" />
       <OptionRow label="Curve" values={o.curve} selected={curve} onSelect={setCurve} hint={o.curve.length > 1 ? "P92 = most popular all-rounder" : undefined} />
       <OptionRow label="Hand" values={o.hand} selected={hand} onSelect={setHand} />
+      {o.length && length && (
+        <OptionRow
+          label="Length"
+          values={o.length}
+          selected={length}
+          onSelect={setLength}
+          hint="Uncut shaft length"
+        />
+      )}
       {o.paddleSize && paddleSize && (
         <OptionRow
           label="Paddle Size"

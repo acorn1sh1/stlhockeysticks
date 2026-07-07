@@ -3,6 +3,7 @@ import { adminConfigured, isAdmin } from "@/lib/admin";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminProducts from "@/components/admin/AdminProducts";
+import AdminOptions from "@/components/admin/AdminOptions";
 import AdminCoupons from "@/components/admin/AdminCoupons";
 import AdminWarranty from "@/components/admin/AdminWarranty";
 
@@ -58,6 +59,10 @@ export default async function AdminPage() {
     include: { batch: { select: { name: true } } },
   });
 
+  const optionValues = await prisma.optionValue.findMany({
+    orderBy: [{ kind: "asc" }, { sizing: "asc" }, { sortOrder: "asc" }],
+  });
+
   const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: "desc" } });
 
   const claims = await prisma.warrantyClaim.findMany({
@@ -92,6 +97,20 @@ export default async function AdminPage() {
 
       <div className="mx-auto max-w-5xl space-y-12 px-4">
         <AdminProducts products={allProducts} />
+        <AdminOptions
+          options={optionValues.map((o) => ({
+            id: o.id,
+            kind: o.kind,
+            value: o.value,
+            label: o.label,
+            sizing: o.sizing,
+            category: o.category,
+            upchargeCents: o.upchargeCents,
+            isDefault: o.isDefault,
+            sortOrder: o.sortOrder,
+            active: o.active,
+          }))}
+        />
         <AdminCoupons
           coupons={coupons.map((c) => ({
             id: c.id,

@@ -191,13 +191,96 @@ const products = [
   },
 ];
 
+// Locked builds for the IN_STOCK catalog (display only, no customization).
+const FIXED_BUILD = {
+  "instock-senior-85-p92": { fixedFlex: 85, fixedCurve: "P92", fixedHand: "Right", fixedLength: '60"' },
+  "instock-senior-75-p28": { fixedFlex: 75, fixedCurve: "P28", fixedHand: "Right", fixedLength: '60"' },
+  "instock-junior-50-p92": { fixedFlex: 50, fixedCurve: "P92", fixedHand: "Right", fixedLength: '54"' },
+  "instock-goalie-26-paddle": { fixedHand: "Right" },
+};
+
 for (const p of products) {
+  // Derive the two-catalog type from the legacy preorder flag.
+  const type = p.preorder === false ? "IN_STOCK" : "PREORDER";
+  const data = { ...p, type, ...(FIXED_BUILD[p.slug] ?? {}) };
   await prisma.product.upsert({
     where: { slug: p.slug },
-    update: p,
-    create: p,
+    update: data,
+    create: data,
   });
 }
+
+// ---- Option catalog (admin-editable) ----
+// Seeded from the defaults that used to live in lib/catalog.ts. Admin can
+// add/edit/deactivate these from /admin. `sizing` scopes tier-specific sets.
+const optionValues = [];
+const pushOpt = (kind, values, extra = {}) =>
+  values.forEach((v, i) =>
+    optionValues.push({
+      kind,
+      value: String(v),
+      sizing: extra.sizing ?? "ALL",
+      category: extra.category ?? "ALL",
+      upchargeCents: extra.upchargeCents ?? 0,
+      isDefault: extra.defaultValue != null ? String(extra.defaultValue) === String(v) : false,
+      sortOrder: i,
+    })
+  );
+
+// Flex — per sizing tier
+pushOpt("FLEX", [65, 70, 75, 80, 85, 90, 95, 102], { sizing: "SENIOR", defaultValue: 85 });
+pushOpt("FLEX", [45, 50, 55, 60, 65], { sizing: "INT", defaultValue: 55 });
+pushOpt("FLEX", [35, 40, 45, 50, 55], { sizing: "JR", defaultValue: 45 });
+pushOpt("FLEX", [20, 25, 30, 35], { sizing: "YTH", defaultValue: 30 });
+
+// Curve — full sticks vs youth/junior subset
+pushOpt("CURVE", ["P92", "P28", "P88", "P92M", "PM9", "P02", "P90TM", "P91A"], {
+  category: "FULL_STICK",
+  defaultValue: "P92",
+});
+// Goalie paddle "curve"
+pushOpt("CURVE", ["31-L"], { category: "GOALIE", defaultValue: "31-L" });
+
+// Hand
+pushOpt("HAND", ["Right", "Left"], { defaultValue: "Right" });
+
+// Color — first (Black) is standard/no upcharge; others +$10
+["Black", "Red", "Golden", "Transparent Blue", "Navy Blue", "Green", "Brown", "Purple", "Silver"].forEach(
+  (c, i) =>
+    optionValues.push({
+      kind: "COLOR",
+      value: c,
+      sizing: "ALL",
+      category: "ALL",
+      upchargeCents: i === 0 ? 0 : 1000,
+      isDefault: i === 0,
+      sortOrder: i,
+    })
+);
+
+// Length — 3 per tier (Senior / Int / Jr). Placeholder inches; edit in /admin.
+pushOpt("LENGTH", ['60"', '57"', '54"'], { sizing: "SENIOR", defaultValue: '60"' });
+pushOpt("LENGTH", ['57"', '54"', '51"'], { sizing: "INT", defaultValue: '57"' });
+pushOpt("LENGTH", ['54"', '50"', '46"'], { sizing: "JR", defaultValue: '54"' });
+
+// Paddle size — goalie only
+pushOpt("PADDLE", ['24"', '26"', '28"', '30"'], { category: "GOALIE", defaultValue: '26"' });
+
+for (const ov of optionValues) {
+  await prisma.optionValue.upsert({
+    where: {
+      kind_value_sizing_category: {
+        kind: ov.kind,
+        value: ov.value,
+        sizing: ov.sizing,
+        category: ov.category,
+      },
+    },
+    update: ov,
+    create: ov,
+  });
+}
+console.log(`Seeded ${optionValues.length} option values.`);
 
 // Retire any old slugs no longer sold
 await prisma.product.updateMany({

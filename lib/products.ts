@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { CATALOG, type CatalogItem } from "./catalog";
+import { withDbOptions } from "./options";
 
 // The static CATALOG owns option matrices (flex/curve/colors/upcharges),
 // specs, and badges — the stuff that rarely changes. The DB Product table
@@ -55,5 +56,9 @@ export async function getMergedCatalog(): Promise<CatalogItem[]> {
 
 export async function getMergedItem(slug: string): Promise<CatalogItem | undefined> {
   const list = await getMergedCatalog();
-  return list.find((i) => i.slug === slug);
+  const item = list.find((i) => i.slug === slug);
+  if (!item) return undefined;
+  // Pre-order items get their option matrix from the admin-editable DB
+  // option catalog (falls back to the static options on any DB issue).
+  return withDbOptions(item);
 }

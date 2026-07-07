@@ -32,14 +32,27 @@ model Product {
   name        String
   description String
   category    Category
+  type        ProductType @default(PREORDER) // PREORDER = configurable; IN_STOCK = fixed SKU
   priceCents  Int
   imageUrl    String?
   clubName    String? // for club-customized mini sticks
-  inStock     Int      @default(0) // on-hand inventory
-  preorder    Boolean  @default(true) // allow pre-order into next batch
+  inStock     Int      @default(0) // on-hand inventory (IN_STOCK only)
+  preorder    Boolean  @default(true) // legacy flag; kept in sync with type. Prefer `type`.
   active      Boolean  @default(true)
+  // Locked build for IN_STOCK SKUs (display only; no customization at checkout).
+  fixedFlex   Int?
+  fixedCurve  String?
+  fixedHand   String?
+  fixedColor  String?
+  fixedLength String?
   orderItems  OrderItem[]
   createdAt   DateTime @default(now())
+}
+
+// Two catalogs: built-to-order (configurable) vs on-the-shelf (fixed SKU).
+enum ProductType {
+  PREORDER
+  IN_STOCK
 }
 
 enum Category {
@@ -47,6 +60,37 @@ enum Category {
   GOALIE
   MINI_CLUB
   MINI_FUN
+}
+
+// Admin-editable option catalog for the pre-order configurator.
+// Seeded with defaults; new values can be added from /admin.
+// `sizing` scopes tier-specific values (e.g. flex sets, lengths) to
+// SENIOR/INT/JR/YTH; "ALL" = applies to all. `category` scopes to
+// FULL_STICK/GOALIE; "ALL" = all. (Sentinel string, not NULL, so the
+// compound unique index dedupes correctly on Postgres.)
+model OptionValue {
+  id            String     @id @default(cuid())
+  kind          OptionKind
+  value         String // canonical stored value, e.g. "P92", "85", "Right", "Black", "57\""
+  label         String? // display override; falls back to value
+  sizing        String     @default("ALL") // SENIOR | INT | JR | YTH | ALL
+  category      String     @default("ALL") // FULL_STICK | GOALIE | ALL
+  upchargeCents Int        @default(0)
+  isDefault     Boolean    @default(false) // pre-selected in configurator
+  sortOrder     Int        @default(0)
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+
+  @@unique([kind, value, sizing, category])
+}
+
+enum OptionKind {
+  FLEX
+  CURVE
+  HAND
+  COLOR
+  LENGTH
+  PADDLE
 }
 
 model Order {
