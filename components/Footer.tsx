@@ -22,6 +22,7 @@ export default function Footer() {
             <li><Link href="/clubs" className="hover:text-volt">Club Custom Program</Link></li>
             <li><Link href="/how-it-works" className="hover:text-volt">How It Works</Link></li>
             <li><Link href="/warranty" className="hover:text-volt">Warranty Claim</Link></li>
+            <li><Link href="/contact" className="hover:text-volt">Contact Us</Link></li>
           </ul>
         </div>
         <div className="text-sm">

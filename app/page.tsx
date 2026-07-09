@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BatchBanner from "@/components/BatchBanner";
 import ProductCard from "@/components/ProductCard";
+import MiniCard from "@/components/MiniCard";
 import StickPhoto from "@/components/StickPhoto";
 import { fmtPrice } from "@/lib/catalog";
 import { getStockMap } from "@/lib/inventory";
@@ -69,6 +70,57 @@ export default async function Home() {
           <div className="relative hidden items-center justify-center md:flex">
             <div className="absolute h-72 w-72 rounded-full border-2 border-volt/30" />
             <StickPhoto colorway="carbon" rotate={-10} className="relative h-96 w-full" />
+          </div>
+        </div>
+      </section>
+
+      {/* FIRST-BATCH LAUNCH OFFER */}
+      <section className="border-b border-volt/30 bg-ink text-paper">
+        <div className="mx-auto max-w-6xl px-4 py-14">
+          <div className="mb-8 text-center">
+            <span className="inline-block rounded-full bg-volt px-4 py-1 text-xs font-black uppercase tracking-wide text-ink">
+              First Batch — Order by Aug 1
+            </span>
+            <h2 className="mt-4 text-3xl font-black tracking-tight md:text-4xl">
+              Stack the Batch. <span className="text-volt">Stack the Savings.</span>
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-paper/70">
+              We&apos;re filling our very first factory order. Go in with your
+              linemates, gear up the whole squad, or just grab a backup twig —
+              the more sticks in the batch, the deeper the discount. Lock your
+              order by <strong className="text-paper">August 1</strong> to cash in.
+            </p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-3">
+            {[
+              { qty: "2+", pct: "10%", label: "You & a linemate" },
+              { qty: "5+", pct: "20%", label: "Half the bench" },
+              { qty: "10+", pct: "25%", label: "Whole roster" },
+            ].map((t) => (
+              <div
+                key={t.qty}
+                className="rounded-2xl border border-paper/15 bg-paper/5 p-6 text-center"
+              >
+                <div className="text-sm font-bold text-paper/60">Buy {t.qty} sticks</div>
+                <div className="mt-1 text-5xl font-black text-volt">{t.pct}</div>
+                <div className="mt-1 text-sm font-bold uppercase tracking-wide text-paper/70">
+                  off
+                </div>
+                <div className="mt-3 text-sm text-paper/60">{t.label}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link
+              href="/sticks"
+              className="inline-block rounded-full bg-volt px-8 py-3 font-bold text-ink transition hover:bg-volt-dark"
+            >
+              Build Your Batch Order →
+            </Link>
+            <p className="mt-3 text-xs text-paper/50">
+              Discount applies automatically in your cart — no code needed. Full
+              &amp; goalie sticks, mix any sizes. Ends August 1.
+            </p>
           </div>
         </div>
       </section>
@@ -193,17 +245,21 @@ export default async function Home() {
               carpet slap shots.
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-2">
-            {minis.map((item) => (
-              <ProductCard key={item.slug} item={item} />
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {minis.slice(0, 3).map((item) => (
+              <MiniCard
+                key={item.slug}
+                item={item}
+                stock={stockMap[item.slug]?.inStock}
+              />
             ))}
           </div>
           <div className="mt-8 text-center">
             <Link
-              href="/clubs"
+              href="/mini-sticks"
               className="inline-block rounded-full bg-volt px-7 py-3 font-bold text-ink transition hover:bg-volt-dark"
             >
-              Get Your Club&apos;s Custom Stick →
+              Browse All Mini Sticks →
             </Link>
           </div>
         </div>

@@ -36,17 +36,26 @@ export default function Header() {
           </Link>
         </nav>
 
-        <button
-          className="md:hidden"
-          onClick={() => setOpen(!open)}
-          aria-label="Menu"
-        >
-          <div className="space-y-1.5">
-            <div className="h-0.5 w-6 bg-ink" />
-            <div className="h-0.5 w-6 bg-ink" />
-            <div className="h-0.5 w-6 bg-ink" />
-          </div>
-        </button>
+        <div className="flex items-center gap-3 md:hidden">
+          <Link
+            href="/cart"
+            className="rounded-full bg-ink px-3 py-1.5 text-sm font-semibold text-paper hover:bg-ink/80"
+            aria-label={`Cart${count > 0 ? ` (${count} items)` : ""}`}
+          >
+            Cart{count > 0 ? ` (${count})` : ""}
+          </Link>
+          <button
+            onClick={() => setOpen(!open)}
+            aria-label="Menu"
+            aria-expanded={open}
+          >
+            <div className="space-y-1.5">
+              <div className="h-0.5 w-6 bg-ink" />
+              <div className="h-0.5 w-6 bg-ink" />
+              <div className="h-0.5 w-6 bg-ink" />
+            </div>
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -61,13 +70,6 @@ export default function Header() {
               {n.label}
             </Link>
           ))}
-          <Link
-            href="/cart"
-            className="mt-2 block rounded-full bg-ink px-4 py-2 text-center font-semibold text-paper"
-            onClick={() => setOpen(false)}
-          >
-            Cart{count > 0 ? ` (${count})` : ""}
-          </Link>
         </nav>
       )}
     </header>

@@ -3,12 +3,34 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
-import { clubDiscountCents, fmtPrice, nextBatch, optionsSummary } from "@/lib/catalog";
+import {
+  batchDiscountActive,
+  batchDiscountCents,
+  batchDiscountPercent,
+  batchDiscountQty,
+  BATCH_DISCOUNT_TIERS,
+  clubDiscountCents,
+  fmtPrice,
+  nextBatch,
+  optionsSummary,
+} from "@/lib/catalog";
 
 export default function CartPage() {
   const { lines, setQty, remove, subtotalCents, count } = useCart();
   const discountCents = clubDiscountCents(lines);
   const afterClubCents = subtotalCents - discountCents;
+
+  // First-batch launch bulk discount (auto, no code) — stick qty tiers.
+  const batchCents = batchDiscountCents(lines);
+  const afterBatchCents = afterClubCents - batchCents;
+  const stickQty = batchDiscountQty(lines);
+  const batchPct = batchDiscountPercent(stickQty);
+  // Next tier up — for the "add N more, save X%" nudge.
+  const nextTier = batchDiscountActive()
+    ? [...BATCH_DISCOUNT_TIERS]
+        .sort((a, b) => a.minQty - b.minQty)
+        .find((t) => t.minQty > stickQty && t.percent > batchPct)
+    : undefined;
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [state, setState] = useState<"idle" | "sending" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -19,9 +41,9 @@ export default function CartPage() {
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponError, setCouponError] = useState("");
   const couponDiscountCents = applied
-    ? Math.min(applied.discountCents, afterClubCents)
+    ? Math.min(applied.discountCents, afterBatchCents)
     : 0;
-  const totalCents = afterClubCents - couponDiscountCents;
+  const totalCents = afterBatchCents - couponDiscountCents;
 
   async function applyCoupon() {
     if (!couponInput.trim()) return;
@@ -30,7 +52,7 @@ export default function CartPage() {
     const res = await fetch("/api/coupon", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: couponInput, subtotalCents: afterClubCents, quantity: count }),
+      body: JSON.stringify({ code: couponInput, subtotalCents: afterBatchCents, quantity: count }),
     });
     const data = await res.json().catch(() => ({}));
     setCouponBusy(false);
@@ -181,6 +203,18 @@ export default function CartPage() {
               <span>−{fmtPrice(discountCents)}</span>
             </div>
           )}
+          {batchCents > 0 && (
+            <div className="mt-1 flex justify-between text-sm font-semibold text-volt-dark">
+              <span>First-Batch Bulk Discount ({batchPct}% off {stickQty} sticks)</span>
+              <span>−{fmtPrice(batchCents)}</span>
+            </div>
+          )}
+          {nextTier && (
+            <div className="mt-1 rounded-lg bg-volt/20 px-3 py-2 text-xs font-bold text-ink">
+              Add {nextTier.minQty - stickQty} more stick
+              {nextTier.minQty - stickQty === 1 ? "" : "s"} to save {nextTier.percent}% on the first batch →
+            </div>
+          )}
 
           {/* Promo code */}
           <div className="mt-3">
@@ -222,7 +256,7 @@ export default function CartPage() {
             </div>
           )}
 
-          {(discountCents > 0 || couponDiscountCents > 0) && (
+          {(discountCents > 0 || batchCents > 0 || couponDiscountCents > 0) && (
             <div className="mt-2 flex justify-between text-lg">
               <span className="font-bold">Total</span>
               <span className="font-black">{fmtPrice(totalCents)}</span>

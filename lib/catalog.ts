@@ -47,6 +47,10 @@ export type CatalogItem = {
   // On-hand unit count (Product.inStock) for IN_STOCK SKUs — used for the
   // "only X left" cue and availability sort/filter. Undefined otherwise.
   stockCount?: number;
+  // Wrap accent color (hex/name) sourced from Product.fixedColor,
+  // populated for ALL types (not just IN_STOCK). Used to tint the mini
+  // stick card + detail art. Undefined when no color is set.
+  accent?: string;
 };
 
 // Minimal non-empty-looking shell so a DB product with `configurable: true`
@@ -415,17 +419,80 @@ export function nextBatch() {
 }
 
 // Club bulk incentive: 10% donated back to the team once a club order
-// (by the club-custom mini stick) passes 20 sticks.
+// passes 20 sticks. Was tied to a single generic "club-custom-mini-stick"
+// SKU; now that each club has its own mini it's category-based — any mix of
+// MINI_CLUB minis counts toward the 20. The old slug is still honored as a
+// fallback so historical/mocked lines without a category keep working.
 export const CLUB_STICK_SLUG = "club-custom-mini-stick";
+export const CLUB_CATEGORY = "MINI_CLUB";
 export const CLUB_DISCOUNT_THRESHOLD = 20;
 export const CLUB_DISCOUNT_RATE = 0.1;
 
 export function clubDiscountCents(
-  lines: { slug: string; quantity: number; priceCents: number }[]
+  lines: { slug: string; quantity: number; priceCents: number; category?: string }[]
 ) {
-  const clubLines = lines.filter((l) => l.slug === CLUB_STICK_SLUG);
+  const clubLines = lines.filter(
+    (l) => l.category === CLUB_CATEGORY || l.slug === CLUB_STICK_SLUG
+  );
   const qty = clubLines.reduce((n, l) => n + l.quantity, 0);
   if (qty <= CLUB_DISCOUNT_THRESHOLD) return 0;
   const clubSubtotal = clubLines.reduce((n, l) => n + l.priceCents * l.quantity, 0);
   return Math.round(clubSubtotal * CLUB_DISCOUNT_RATE);
+}
+
+// ---- First-Batch Launch bulk discount ----------------------------------
+// Limited-time launch promo: stack more sticks into the first batch, save
+// more. Auto-applies (no code) to built-to-order full sticks + goalie sticks
+// by TOTAL stick quantity. Excludes minis (own club discount) and in-stock
+// SKUs (not part of a batch). Deadline is the *order-by* cutoff — Aug 1 2026,
+// end of day Central (Aug 2 05:00 UTC / CDT). Re-computed server-side at
+// checkout so a client can never fake the tier or beat the deadline.
+export const BATCH_DISCOUNT_DEADLINE = new Date("2026-08-02T05:00:00Z");
+export const BATCH_DISCOUNT_CATEGORIES = ["FULL_STICK", "GOALIE"];
+export const BATCH_DISCOUNT_TIERS = [
+  { minQty: 10, percent: 25 },
+  { minQty: 5, percent: 20 },
+  { minQty: 2, percent: 10 },
+]; // highest threshold first — first match wins
+
+// Percent off for a given stick quantity (0 if below the lowest tier).
+export function batchDiscountPercent(qty: number): number {
+  return BATCH_DISCOUNT_TIERS.find((t) => qty >= t.minQty)?.percent ?? 0;
+}
+
+export function batchDiscountActive(now: Date = new Date()): boolean {
+  return now.getTime() < BATCH_DISCOUNT_DEADLINE.getTime();
+}
+
+// Stick lines that count toward the launch discount (built-to-order full
+// sticks + goalie; minis and in-stock "instock-*" SKUs excluded).
+function batchEligibleLines<
+  T extends { slug: string; quantity: number; priceCents: number; category?: string }
+>(lines: T[]): T[] {
+  return lines.filter(
+    (l) =>
+      !l.slug.startsWith("instock-") &&
+      l.category != null &&
+      BATCH_DISCOUNT_CATEGORIES.includes(l.category)
+  );
+}
+
+// Total eligible stick quantity — drives the tier + "add N more to save" cues.
+export function batchDiscountQty(
+  lines: { slug: string; quantity: number; priceCents: number; category?: string }[]
+): number {
+  return batchEligibleLines(lines).reduce((n, l) => n + l.quantity, 0);
+}
+
+export function batchDiscountCents(
+  lines: { slug: string; quantity: number; priceCents: number; category?: string }[],
+  now: Date = new Date()
+): number {
+  if (!batchDiscountActive(now)) return 0;
+  const sticks = batchEligibleLines(lines);
+  const qty = sticks.reduce((n, l) => n + l.quantity, 0);
+  const percent = batchDiscountPercent(qty);
+  if (!percent) return 0;
+  const subtotal = sticks.reduce((n, l) => n + l.priceCents * l.quantity, 0);
+  return Math.round((subtotal * percent) / 100);
 }

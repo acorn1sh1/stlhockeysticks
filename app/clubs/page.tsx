@@ -3,9 +3,9 @@ import BatchBanner from "@/components/BatchBanner";
 import ClubInquiryForm from "@/components/ClubInquiryForm";
 
 export const metadata: Metadata = {
-  title: "Club Custom Mini Sticks",
+  title: "Club & Team Custom Stick Orders",
   description:
-    "Custom mini sticks in your STL club's colors and logo. Team-priced bulk orders delivered with our monthly batch.",
+    "Custom sticks in your STL club's colors and logo — full sticks, goalie sticks, minis, or any mix. Team-priced bulk orders delivered with our monthly batch.",
 };
 
 export default function ClubsPage() {
@@ -16,16 +16,17 @@ export default function ClubsPage() {
         <div className="mx-auto max-w-6xl px-4 py-16">
           <h1 className="max-w-2xl text-4xl font-black tracking-tight md:text-5xl">
             Your Club. Your Colors.{" "}
-            <span className="text-volt">Your Mini Stick.</span>
+            <span className="text-volt">Your Sticks.</span>
           </h1>
           <p className="mt-4 max-w-xl text-paper/70">
-            We design and produce custom mini sticks for St. Louis area hockey
-            clubs — team colors, logo, the works. Kids fight over them in the
-            locker room, parents buy them, clubs run them as fundraisers and
-            end-of-season gifts that actually get used.
+            We design and produce custom sticks for St. Louis area hockey clubs —
+            team colors, logo, the works. Placing a full stick order for the whole
+            team? We got you. Want to mix and match minis and goalie sticks? No
+            problem. Clubs run them as fundraisers and end-of-season gifts that
+            actually get used.
           </p>
           <p className="mt-4 inline-block rounded-full bg-volt px-4 py-2 text-sm font-bold text-ink">
-            Order 20+ sticks and we donate 10% back to your team.
+            Order 20+ and we donate 10% back to your team.
           </p>
         </div>
       </section>
@@ -53,7 +54,7 @@ export default function ClubsPage() {
               ))}
             </ol>
             <div className="mt-8 rounded-2xl border border-black/10 bg-white p-5 text-sm text-black/60">
-              Fundraiser idea: clubs typically sell custom minis at a healthy
+              Fundraiser idea: clubs typically sell custom sticks at a healthy
               markup over team cost. Your stick, your margin.
             </div>
           </div>

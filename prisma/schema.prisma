@@ -205,6 +205,16 @@ model ClubInquiry {
   createdAt DateTime @default(now())
 }
 
+// General "Contact Us" message from the storefront contact page.
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+}
+
 // Broken-stick warranty claim. Window: 30 days from purchase.
 // Must be filed online with photos + order reference.
 model WarrantyClaim {

@@ -14,6 +14,7 @@ export type CartLine = {
   key: string; // slug + options fingerprint
   slug: string;
   name: string;
+  category?: string; // used for the category-based club bulk discount
   priceCents: number; // unit price incl. option upcharges
   quantity: number;
   options?: SelectedOptions;
@@ -65,6 +66,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           key,
           slug: item.slug,
           name: item.name,
+          category: item.category,
           priceCents: unitPriceCents(item, options),
           quantity: qty,
           options,

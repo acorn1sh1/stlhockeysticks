@@ -4,6 +4,9 @@ import { createHostedCheckout } from "@/lib/clover";
 import { getOrCreateOpenBatch } from "@/lib/batch";
 import { validateCoupon } from "@/lib/coupons";
 import {
+  batchDiscountCents,
+  batchDiscountPercent,
+  batchDiscountQty,
   CATALOG,
   clubDiscountCents,
   optionsSummary,
@@ -99,11 +102,22 @@ export async function POST(req: Request) {
   }
 
   const grossCents = lines.reduce((n, l) => n + l.unitCents * l.quantity, 0);
-  const discountCents = clubDiscountCents(
-    lines.map((l) => ({ slug: l.product.slug, quantity: l.quantity, priceCents: l.unitCents }))
-  );
+  const discountLineInput = lines.map((l) => ({
+    slug: l.product.slug,
+    quantity: l.quantity,
+    priceCents: l.unitCents,
+    category: l.product.category,
+  }));
+  const clubCents = clubDiscountCents(discountLineInput);
+  // First-batch launch discount — re-computed server-side (tier + deadline)
+  // so a tampered client can't fake a tier or beat the Aug 1 cutoff.
+  const batchCents = batchDiscountCents(discountLineInput);
+  const batchPct = batchDiscountPercent(batchDiscountQty(discountLineInput));
+  // Both are order-level bulk discounts netted into subtotalCents (see
+  // Order.discountCents). Kept as separate Clover lines for a clear receipt.
+  const discountCents = clubCents + batchCents;
 
-  // Coupon applies on top of any club discount. Re-validated here so a
+  // Coupon applies on top of any bulk discount. Re-validated here so a
   // tampered client can never inject a fake discount.
   const afterClub = grossCents - discountCents;
   let couponId: string | null = null;
@@ -165,8 +179,11 @@ export async function POST(req: Request) {
           priceCents: l.unitCents,
           quantity: l.quantity,
         })),
-        ...(discountCents > 0
-          ? [{ name: "10% Team Donation Discount", priceCents: -discountCents, quantity: 1 }]
+        ...(clubCents > 0
+          ? [{ name: "10% Team Donation Discount", priceCents: -clubCents, quantity: 1 }]
+          : []),
+        ...(batchCents > 0
+          ? [{ name: `First-Batch Bulk Discount (${batchPct}% off)`, priceCents: -batchCents, quantity: 1 }]
           : []),
         ...(couponDiscountCents > 0
           ? [{ name: `Promo ${couponCode}`, priceCents: -couponDiscountCents, quantity: 1 }]

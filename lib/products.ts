@@ -56,6 +56,9 @@ export async function getMergedCatalog(): Promise<CatalogItem[]> {
             }
           : undefined,
       stockCount: db.type === "IN_STOCK" ? db.inStock : undefined,
+      // Accent color for minis (and anything with a color set); available
+      // for pre-order too, unlike `fixed` which is IN_STOCK-only.
+      accent: db.fixedColor ?? undefined,
     };
   });
 }
