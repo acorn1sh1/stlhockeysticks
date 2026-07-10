@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 430" role="img" aria-label="STL Hockey Sticks">
+  <defs>
+    <linearGradient id="c" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#dfe2e6"/>
+      <stop offset="0.6" stop-color="#a7adb5"/>
+      <stop offset="0.78" stop-color="#7d838b"/>
+      <stop offset="1" stop-color="#b9bec5"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(91,4) scale(1.9)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 154 C22 96 52 12 86 12 C116 12 122 62 130 106 C133 120 136 128 144 134" fill="none" stroke="#5cd821" stroke-width="21"/>
+    <path d="M16 154 C22 96 52 12 86 12 C116 12 122 62 130 106 C133 120 136 128 144 134" fill="none" stroke="#17181a" stroke-width="16"/>
+    <path d="M16 154 C22 96 52 12 86 12 C116 12 122 62 130 106 C133 120 136 128 144 134" fill="none" stroke="url(#c)" stroke-width="12"/>
+    <path d="M128 106 C134 124 142 132 154 136 L172 139 C180 140 182 143 181 148 C180 153 176 155 169 154 L150 152 C132 149 120 136 116 118 Z" fill="#5cd821" stroke="#5cd821" stroke-width="8"/>
+    <path d="M128 106 C134 124 142 132 154 136 L172 139 C180 140 182 143 181 148 C180 153 176 155 169 154 L150 152 C132 149 120 136 116 118 Z" fill="url(#c)" stroke="#17181a" stroke-width="4"/>
+    <g stroke="#17181a" stroke-width="2.2" opacity="0.85">
+      <line x1="158" y1="136" x2="155" y2="152"/>
+      <line x1="164" y1="137" x2="161" y2="153"/>
+      <line x1="170" y1="138" x2="167" y2="154"/>
+    </g>
+  </g>
+  <g transform="skewX(-8)" font-family="'Arial Black','Archivo Black',Arial,sans-serif" font-weight="900" font-style="italic" text-anchor="middle">
+    <text x="310" y="336" font-size="100" fill="#17181a" stroke="#5cd821" stroke-width="13" stroke-linejoin="round" paint-order="stroke">STL</text>
+    <text x="310" y="336" font-size="100" fill="url(#c)" stroke="#17181a" stroke-width="5" stroke-linejoin="round" paint-order="stroke">STL</text>
+    <text x="305" y="412" font-size="62" textLength="500" lengthAdjust="spacingAndGlyphs" fill="#17181a" stroke="#5cd821" stroke-width="13" stroke-linejoin="round" paint-order="stroke">HOCKEY STICKS</text>
+    <text x="305" y="412" font-size="62" textLength="500" lengthAdjust="spacingAndGlyphs" fill="url(#c)" stroke="#17181a" stroke-width="5" stroke-linejoin="round" paint-order="stroke">HOCKEY STICKS</text>
+  </g>
+</svg>
