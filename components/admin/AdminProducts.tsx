@@ -1,8 +1,22 @@
 "use client";
 
 import { fmtPrice } from "@/lib/catalog";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+// Sizing-tier key → storefront page + short label, for the Size column link.
+const TIER_META: Record<string, { label: string; route: string }> = {
+  SENIOR: { label: "Senior", route: "/sticks/senior" },
+  INT: { label: "Intermediate", route: "/sticks/intermediate" },
+  JR: { label: "Junior", route: "/sticks/junior" },
+  YTH: { label: "Youth", route: "/sticks/youth" },
+};
+const TIER_ORDER = ["SENIOR", "INT", "JR", "YTH"];
+const tierRank = (t: string | null) => {
+  const i = t ? TIER_ORDER.indexOf(t) : -1;
+  return i === -1 ? 99 : i; // unknown / tier-less sorts last
+};
 
 export type ProductRow = {
   id: string;
@@ -46,7 +60,7 @@ async function post(body: unknown) {
   });
 }
 
-type SortKey = "name" | "category" | "price" | "cost" | "active";
+type SortKey = "name" | "category" | "size" | "price" | "cost" | "active";
 
 // Clickable column header — click to sort, click again to flip direction.
 function SortTh({
@@ -102,6 +116,9 @@ export default function AdminProducts({
     switch (sort.key) {
       case "category":
         return d * (a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+      case "size":
+        // Order by tier (Senior→Youth), tier-less products (goalie/minis) last.
+        return d * (tierRank(a.sizingTier) - tierRank(b.sizingTier)) || a.name.localeCompare(b.name);
       case "price":
         return d * (a.priceCents - b.priceCents);
       case "cost":
@@ -146,6 +163,7 @@ export default function AdminProducts({
             <tr>
               <SortTh label="Product" k="name" sort={sort} onSort={toggle} />
               <SortTh label="Category" k="category" sort={sort} onSort={toggle} />
+              <SortTh label="Size" k="size" sort={sort} onSort={toggle} />
               <SortTh label="Price" k="price" sort={sort} onSort={toggle} />
               <SortTh label="Cost" k="cost" sort={sort} onSort={toggle} />
               <SortTh label="Active" k="active" sort={sort} onSort={toggle} />
@@ -221,6 +239,20 @@ function ProductRowEditor({
         </td>
         <td className="p-3 text-black/60">{row.category.replace("_", " ")}</td>
         <td className="p-3">
+          {row.sizingTier && TIER_META[row.sizingTier] ? (
+            <Link
+              href={TIER_META[row.sizingTier].route}
+              target="_blank"
+              className="font-semibold text-volt-dark underline decoration-dotted underline-offset-2 hover:text-ink"
+              title={`View the ${TIER_META[row.sizingTier].label} page`}
+            >
+              {TIER_META[row.sizingTier].label}
+            </Link>
+          ) : (
+            <span className="text-black/30">—</span>
+          )}
+        </td>
+        <td className="p-3">
           <div className="flex items-center gap-2">
             <span className="text-black/40">$</span>
             <input
@@ -274,7 +306,7 @@ function ProductRowEditor({
       </tr>
       {expanded && (
         <tr className="border-b border-black/5 last:border-0">
-          <td colSpan={6} className="bg-black/[0.02] p-4">
+          <td colSpan={7} className="bg-black/[0.02] p-4">
             <ProductDetailEditor
               row={row}
               categories={categories}
