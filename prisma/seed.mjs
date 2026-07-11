@@ -31,7 +31,8 @@ const attributeKinds = [
   { key: "HAND", label: "Hand", unit: "", sortOrder: 2 },
   { key: "COLOR", label: "Color", unit: "", sortOrder: 3 },
   { key: "LENGTH", label: "Length", unit: "\"", sortOrder: 4 },
-  { key: "PADDLE", label: "Paddle Size", unit: "\"", sortOrder: 5 },
+  { key: "KICK", label: "Kick Point", unit: "", sortOrder: 5 },
+  { key: "PADDLE", label: "Paddle Size", unit: "\"", sortOrder: 6 },
 ];
 for (const k of attributeKinds) {
   await prisma.attributeKind.upsert({ where: { key: k.key }, update: k, create: k });
@@ -54,7 +55,7 @@ const products = [
     sizingTier: "SENIOR",
     configurable: true,
     badge: "Top Shelf",
-    specs: ["335g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick"],
+    specs: ["335g", "T1100 + boron carbon", "24K weave"],
     priceCents: 11900,
     preorder: true,
   },
@@ -66,7 +67,7 @@ const products = [
     sizingTier: "SENIOR",
     configurable: true,
     badge: "Best Seller",
-    specs: ["375g", "T1100/T800 carbon", "18K weave", "Mid kick"],
+    specs: ["375g", "T1100/T800 carbon", "18K weave"],
     priceCents: 9900,
     preorder: true,
   },
@@ -78,7 +79,7 @@ const products = [
     sizingTier: "SENIOR",
     configurable: true,
     badge: "Best Value",
-    specs: ["425g", "T700 carbon", "18K weave", "Mid kick"],
+    specs: ["425g", "T700 carbon", "18K weave"],
     priceCents: 7900,
     preorder: true,
   },
@@ -92,7 +93,7 @@ const products = [
     sizingTier: "INT",
     configurable: true,
     badge: "Top Shelf",
-    specs: ["295g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick", "INT sizing"],
+    specs: ["295g", "T1100 + boron carbon", "24K weave", "INT sizing"],
     priceCents: 10900,
     preorder: true,
   },
@@ -104,7 +105,7 @@ const products = [
     sizingTier: "INT",
     configurable: true,
     badge: "Best Seller",
-    specs: ["335g", "T1100/T800 carbon", "18K weave", "Mid kick", "INT sizing"],
+    specs: ["335g", "T1100/T800 carbon", "18K weave", "INT sizing"],
     priceCents: 8900,
     preorder: true,
   },
@@ -116,7 +117,7 @@ const products = [
     sizingTier: "INT",
     configurable: true,
     badge: "Best Value",
-    specs: ["395g", "T700 carbon", "18K weave", "Mid kick", "INT sizing"],
+    specs: ["395g", "T700 carbon", "18K weave", "INT sizing"],
     priceCents: 6900,
     preorder: true,
   },
@@ -130,7 +131,7 @@ const products = [
     sizingTier: "JR",
     configurable: true,
     badge: "Top Shelf",
-    specs: ["245g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick", "JR sizing"],
+    specs: ["245g", "T1100 + boron carbon", "24K weave", "JR sizing"],
     priceCents: 8900,
     preorder: true,
   },
@@ -142,7 +143,7 @@ const products = [
     sizingTier: "JR",
     configurable: true,
     badge: "Best Seller",
-    specs: ["265g", "T1100/T800 carbon", "18K weave", "Mid kick", "JR sizing"],
+    specs: ["265g", "T1100/T800 carbon", "18K weave", "JR sizing"],
     priceCents: 6900,
     preorder: true,
   },
@@ -154,7 +155,7 @@ const products = [
     sizingTier: "JR",
     configurable: true,
     badge: "Best Value",
-    specs: ["315g", "T700 carbon", "18K weave", "Mid kick", "JR sizing"],
+    specs: ["315g", "T700 carbon", "18K weave", "JR sizing"],
     priceCents: 4900,
     preorder: true,
   },
@@ -168,7 +169,7 @@ const products = [
     sizingTier: "YTH",
     configurable: true,
     badge: "Top Shelf",
-    specs: ["225g", "T1100 + boron carbon", "24K weave", "High/Mid/Low kick", "YTH sizing"],
+    specs: ["225g", "T1100 + boron carbon", "24K weave", "YTH sizing"],
     priceCents: 7900,
     preorder: true,
   },
@@ -180,7 +181,7 @@ const products = [
     sizingTier: "YTH",
     configurable: true,
     badge: "Best Seller",
-    specs: ["265g", "T1100/T800 carbon", "18K weave", "Mid kick", "YTH sizing"],
+    specs: ["265g", "T1100/T800 carbon", "18K weave", "YTH sizing"],
     priceCents: 5900,
     preorder: true,
   },
@@ -472,6 +473,14 @@ pushOpt("LENGTH", ['66"', '68"', '70"'], { sizing: "SENIOR", defaultValue: '68"'
 pushOpt("LENGTH", ['63"', '61"', '59"'], { sizing: "INT", defaultValue: '61"' });
 pushOpt("LENGTH", ['57"', '55"', '53"'], { sizing: "JR", defaultValue: '55"' });
 pushOpt("LENGTH", ['51"', '49"', '47"'], { sizing: "YTH", defaultValue: '49"' });
+
+// Kick point — per tier, from the supplier's "bending point" spec sheet.
+// Senior/Int mid-weights ship medium/low; Junior/Youth premiums ship high/mid.
+pushOpt("KICK", ["Low", "Mid"], { sizing: "SENIOR", category: "FULL_STICK", defaultValue: "Mid" });
+pushOpt("KICK", ["Low", "Mid"], { sizing: "INT", category: "FULL_STICK", defaultValue: "Mid" });
+pushOpt("KICK", ["Mid", "High"], { sizing: "JR", category: "FULL_STICK", defaultValue: "Mid" });
+pushOpt("KICK", ["Mid", "High"], { sizing: "YTH", category: "FULL_STICK", defaultValue: "Mid" });
+pushOpt("KICK", ["Low", "Mid"], { category: "GOALIE", defaultValue: "Mid" });
 
 // Paddle size — goalie only, 21"-28" in 1" increments
 pushOpt("PADDLE", ['21"', '22"', '23"', '24"', '25"', '26"', '27"', '28"'], {

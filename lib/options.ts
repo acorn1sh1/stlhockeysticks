@@ -111,6 +111,7 @@ export function optionsFromRows(
   const handRows = pick("HAND");
   const colorRows = pick("COLOR");
   const lengthRows = pick("LENGTH");
+  const kickRows = pick("KICK");
   const paddleRows = pick("PADDLE");
 
   // Color upcharge preserves current pricing model: first color = standard,
@@ -125,6 +126,7 @@ export function optionsFromRows(
     hand: handRows.map((r) => r.value),
     colors: colorRows.map((r) => r.value),
     length: !isGoalie && lengthRows.length ? lengthRows.map((r) => r.value) : undefined,
+    kick: kickRows.length ? kickRows.map((r) => r.value) : undefined,
     paddleSize: isGoalie && paddleRows.length ? paddleRows.map((r) => r.value) : undefined,
     colorUpchargeCents,
     nameUpchargeCents: NAME_UPCHARGE_CENTS,
@@ -134,6 +136,7 @@ export function optionsFromRows(
       hand: firstDefault(handRows),
       color: firstDefault(colorRows),
       length: isGoalie ? undefined : firstDefault(lengthRows),
+      kick: firstDefault(kickRows),
       paddleSize: firstDefault(paddleRows),
     },
   };

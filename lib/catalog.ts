@@ -7,11 +7,12 @@ export type StickOptions = {
   hand: string[];
   colors: string[]; // first = standard (no upcharge)
   length?: string[]; // 3 per tier (Senior/Int/Jr); omitted for goalie/youth
+  kick?: string[]; // kick point (Low/Mid/High); omitted when not offered
   colorUpchargeCents: number;
   nameUpchargeCents: number; // custom name printing on shaft
   paddleSize?: string[]; // goalie only
   // Pre-selected defaults sourced from the option catalog (isDefault rows).
-  defaults?: Partial<{ flex: number; curve: string; hand: string; color: string; length: string; paddleSize: string }>;
+  defaults?: Partial<{ flex: number; curve: string; hand: string; color: string; length: string; kick: string; paddleSize: string }>;
 };
 
 export type CatalogItem = {
@@ -344,6 +345,7 @@ export type SelectedOptions = {
   hand?: string;
   color?: string;
   length?: string;
+  kick?: string;
   customName?: string;
   paddleSize?: string;
 };
@@ -373,6 +375,8 @@ export function validateOptions(
   if (sel.color && !o.colors.includes(sel.color)) return "Invalid color";
   if (o.length && (!sel.length || !o.length.includes(sel.length)))
     return "Invalid length";
+  if (o.kick && (!sel.kick || !o.kick.includes(sel.kick)))
+    return "Invalid kick point";
   if (o.paddleSize && (!sel.paddleSize || !o.paddleSize.includes(sel.paddleSize)))
     return "Invalid paddle size";
   if (sel.customName && sel.customName.length > 20)
@@ -387,6 +391,7 @@ export function optionsSummary(sel?: SelectedOptions) {
     sel.curve,
     sel.hand,
     sel.length && `${sel.length} length`,
+    sel.kick && `${sel.kick} kick`,
     sel.paddleSize && `${sel.paddleSize} paddle`,
     sel.color && sel.color !== "Black" ? sel.color : null,
     sel.customName?.trim() ? `"${sel.customName.trim()}"` : null,

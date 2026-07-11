@@ -62,6 +62,13 @@ export default function Configurator({ item }: { item: CatalogItem }) {
   const [length, setLength] = useState(
     o.length ? (d.length && o.length.includes(d.length) ? d.length : o.length[0]) : undefined
   );
+  const [kick, setKick] = useState(
+    o.kick
+      ? d.kick && o.kick.includes(d.kick)
+        ? d.kick
+        : o.kick[Math.floor(o.kick.length / 2)]
+      : undefined
+  );
   const [customName, setCustomName] = useState("");
   const [paddleSize, setPaddleSize] = useState(
     o.paddleSize
@@ -79,10 +86,11 @@ export default function Configurator({ item }: { item: CatalogItem }) {
       hand,
       color,
       length: o.length ? length : undefined,
+      kick: o.kick ? kick : undefined,
       customName: customName.trim() || undefined,
       paddleSize: o.paddleSize ? paddleSize : undefined,
     }),
-    [flex, curve, hand, color, length, customName, paddleSize, o.paddleSize, o.length]
+    [flex, curve, hand, color, length, kick, customName, paddleSize, o.paddleSize, o.length, o.kick]
   );
 
   const price = unitPriceCents(item, sel);
@@ -105,6 +113,15 @@ export default function Configurator({ item }: { item: CatalogItem }) {
           selected={length}
           onSelect={setLength}
           hint="Uncut shaft length"
+        />
+      )}
+      {o.kick && kick && (
+        <OptionRow
+          label="Kick Point"
+          values={o.kick}
+          selected={kick}
+          onSelect={setKick}
+          hint="Low = quick release · High = more power on slappers"
         />
       )}
       {o.paddleSize && paddleSize && (
