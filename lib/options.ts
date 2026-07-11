@@ -115,7 +115,9 @@ export function optionsFromRows(
 
   // Color upcharge preserves current pricing model: first color = standard,
   // others flat upcharge (taken from the first non-zero color row).
-  const colorUpchargeCents = colorRows.find((r) => r.upchargeCents > 0)?.upchargeCents ?? 1000;
+  // Flat color upcharge = the first color that carries one. If NO color has an
+  // upcharge, color is free (fallback 0) — no phantom charge.
+  const colorUpchargeCents = colorRows.find((r) => r.upchargeCents > 0)?.upchargeCents ?? 0;
 
   return {
     flex: flexRows.map((r) => Number(r.value)),

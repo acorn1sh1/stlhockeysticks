@@ -120,7 +120,11 @@ export default function Configurator({ item }: { item: CatalogItem }) {
         values={o.colors}
         selected={color}
         onSelect={setColor}
-        hint={`${o.colors[0]} standard · others +${fmtPrice(o.colorUpchargeCents)}`}
+        hint={
+          o.colorUpchargeCents > 0
+            ? `${o.colors[0]} standard · others +${fmtPrice(o.colorUpchargeCents)}`
+            : "any color included"
+        }
       />
       <div>
         <div className="flex items-baseline justify-between">
