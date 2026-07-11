@@ -35,8 +35,43 @@ async function loadRows(): Promise<Row[]> {
   return rows;
 }
 
+// Phase 2: per-product option overrides, keyed by product slug → kind → rows.
+// Loaded in one query and cached alongside the global option set. When a slug
+// has rows for a kind, those REPLACE the scoped set for that kind (see
+// optionsFromRows). Most products have no overrides, so this is usually empty.
+let ovCache: { at: number; bySlug: Map<string, Map<string, Row[]>> } | null = null;
+
+async function loadOverrides(): Promise<Map<string, Map<string, Row[]>>> {
+  if (ovCache && Date.now() - ovCache.at < TTL_MS) return ovCache.bySlug;
+  const rows = await prisma.productOption.findMany({
+    where: { optionValue: { active: true } },
+    include: { optionValue: true, product: { select: { slug: true } } },
+  });
+  const bySlug = new Map<string, Map<string, Row[]>>();
+  for (const r of rows) {
+    const ov = r.optionValue;
+    const byKind = bySlug.get(r.product.slug) ?? new Map<string, Row[]>();
+    const arr = byKind.get(ov.kind) ?? [];
+    arr.push({
+      kind: ov.kind,
+      value: ov.value,
+      label: ov.label,
+      sizing: ov.sizing,
+      category: ov.category,
+      upchargeCents: ov.upchargeCents,
+      isDefault: ov.isDefault,
+      sortOrder: ov.sortOrder,
+    });
+    byKind.set(ov.kind, arr);
+    bySlug.set(r.product.slug, byKind);
+  }
+  ovCache = { at: Date.now(), bySlug };
+  return bySlug;
+}
+
 export function invalidateOptionCache() {
   cache = null;
+  ovCache = null;
 }
 
 const scoped = (rows: Row[], kind: string, tier: string, cat: string) =>
@@ -50,7 +85,13 @@ const scoped = (rows: Row[], kind: string, tier: string, cat: string) =>
 const firstDefault = (rows: Row[]) => rows.find((r) => r.isDefault)?.value;
 
 // Build the option matrix for one pre-order item from DB rows.
-export function optionsFromRows(item: CatalogItem, rows: Row[]): StickOptions {
+// `override` (Phase 2): kind → pinned rows for this specific product. When a
+// kind is present, its rows replace the tier/category-scoped set for that kind.
+export function optionsFromRows(
+  item: CatalogItem,
+  rows: Row[],
+  override?: Map<string, Row[]>
+): StickOptions {
   // Prefer the explicit Product.sizingTier (set by admin / seed); fall back
   // to the slug-substring guess only for static-fallback items that never
   // got a DB row (offline mode, or a static CATALOG entry with no DB match).
@@ -58,12 +99,19 @@ export function optionsFromRows(item: CatalogItem, rows: Row[]): StickOptions {
   const cat = item.category;
   const isGoalie = cat === "GOALIE";
 
-  const flexRows = scoped(rows, "FLEX", tier, cat);
-  const curveRows = scoped(rows, "CURVE", tier, cat);
-  const handRows = scoped(rows, "HAND", tier, cat);
-  const colorRows = scoped(rows, "COLOR", tier, cat);
-  const lengthRows = scoped(rows, "LENGTH", tier, cat);
-  const paddleRows = scoped(rows, "PADDLE", tier, cat);
+  // Per-kind resolver: use the product's pinned override rows if it has any
+  // for that kind, otherwise the scoped shared set.
+  const pick = (kind: string) => {
+    const o = override?.get(kind);
+    return o && o.length ? o : scoped(rows, kind, tier, cat);
+  };
+
+  const flexRows = pick("FLEX");
+  const curveRows = pick("CURVE");
+  const handRows = pick("HAND");
+  const colorRows = pick("COLOR");
+  const lengthRows = pick("LENGTH");
+  const paddleRows = pick("PADDLE");
 
   // Color upcharge preserves current pricing model: first color = standard,
   // others flat upcharge (taken from the first non-zero color row).
@@ -74,7 +122,7 @@ export function optionsFromRows(item: CatalogItem, rows: Row[]): StickOptions {
     curve: curveRows.map((r) => r.value),
     hand: handRows.map((r) => r.value),
     colors: colorRows.map((r) => r.value),
-    length: lengthRows.length ? lengthRows.map((r) => r.value) : undefined,
+    length: !isGoalie && lengthRows.length ? lengthRows.map((r) => r.value) : undefined,
     paddleSize: isGoalie && paddleRows.length ? paddleRows.map((r) => r.value) : undefined,
     colorUpchargeCents,
     nameUpchargeCents: NAME_UPCHARGE_CENTS,
@@ -83,7 +131,7 @@ export function optionsFromRows(item: CatalogItem, rows: Row[]): StickOptions {
       curve: firstDefault(curveRows),
       hand: firstDefault(handRows),
       color: firstDefault(colorRows),
-      length: firstDefault(lengthRows),
+      length: isGoalie ? undefined : firstDefault(lengthRows),
       paddleSize: firstDefault(paddleRows),
     },
   };
@@ -94,8 +142,8 @@ export function optionsFromRows(item: CatalogItem, rows: Row[]): StickOptions {
 export async function withDbOptions(item: CatalogItem): Promise<CatalogItem> {
   if (!item.options) return item; // minis + in-stock: nothing to configure
   try {
-    const rows = await loadRows();
-    const opts = optionsFromRows(item, rows);
+    const [rows, bySlug] = await Promise.all([loadRows(), loadOverrides()]);
+    const opts = optionsFromRows(item, rows, bySlug.get(item.slug));
     // Guard: if the DB is empty/misconfigured for this tier, keep static.
     if (!opts.flex.length || !opts.curve.length || !opts.hand.length || !opts.colors.length) {
       return item;

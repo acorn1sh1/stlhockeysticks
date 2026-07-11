@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type StockRow = { slug: string; name: string; inStock: number; priceCents: number };
+type BatchProduct = {
+  productId: string;
+  name: string;
+  qty: number;
+  defaultCostCents: number;
+  overrideCents: number | null;
+};
 type BatchRow = {
   id: string;
   name: string;
@@ -13,6 +20,12 @@ type BatchRow = {
   pickupStart: string;
   pickupEnd: string;
   orderCount: number;
+  revenueCents: number;
+  freightCents: number;
+  tariffCents: number;
+  otherCostCents: number;
+  costNotes: string | null;
+  products: BatchProduct[]; // confirmed units in this batch, aggregated by product
 };
 type OrderRow = {
   id: string;
@@ -126,11 +139,13 @@ export default function AdminDashboard({
         </button>
       </div>
       <p className="mt-1 text-sm text-black/50">
-        Batches auto-create on the monthly cutoff — add/edit here only to
-        override that. Marking a batch “Arrived” flips its paid orders to
-        Ready for Pickup. “Export” downloads a build sheet (.xlsx) of
-        confirmed orders — grouped counts by flex/curve/hand/color/length,
-        plus a separate sheet for anything with a printed custom name.
+        A new batch auto-creates each month on the cutoff — add/edit/delete
+        here to override that. Marking a batch “Arrived” flips its paid
+        orders to Ready for Pickup. “Build Sheet” is the internal .xlsx
+        (grouped counts + custom names); “Supplier Order” is the Junda
+        quotation-format .xlsx ready to send to the factory. Open a batch to
+        set dates and track its landed cost — unit costs, freight, and
+        tariffs feed the Accounting section below.
       </p>
 
       {addingBatch && (
@@ -301,8 +316,38 @@ function AddStockSku({ categories, onDone }: { categories: string[]; onDone: () 
   );
 }
 
+// COGS for a batch = Σ qty × (per-batch override ?? product default cost).
+function batchCogsCents(row: BatchRow) {
+  return row.products.reduce(
+    (sum, p) => sum + p.qty * (p.overrideCents ?? p.defaultCostCents),
+    0
+  );
+}
+
 function BatchRowEditor({ row, onSaved }: { row: BatchRow; onSaved: () => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const landed = batchCogsCents(row) + row.freightCents + row.tariffCents + row.otherCostCents;
+  const margin = row.revenueCents - landed;
+
+  async function remove() {
+    if (!confirm(`Delete “${row.name}”?`)) return;
+    setBusy(true);
+    let res = await fetch(`/api/admin/batch?batchId=${row.id}`, { method: "DELETE" });
+    if (res.status === 409) {
+      const msg = (await res.json().catch(() => ({})))?.error ?? "Batch has orders.";
+      if (confirm(`${msg}\n\nDelete anyway?`)) {
+        res = await fetch(`/api/admin/batch?batchId=${row.id}&force=1`, { method: "DELETE" });
+      } else {
+        setBusy(false);
+        return;
+      }
+    }
+    setBusy(false);
+    if (res.ok) onSaved();
+    else alert((await res.json().catch(() => ({})))?.error ?? "Delete failed");
+  }
+
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -312,14 +357,26 @@ function BatchRowEditor({ row, onSaved }: { row: BatchRow; onSaved: () => void }
             Cutoff {fmtDate(row.cutoffDate)} · Pickup {fmtDate(row.pickupStart)}–
             {fmtDate(row.pickupEnd)} · {row.orderCount} order{row.orderCount === 1 ? "" : "s"}
           </div>
+          <div className="mt-0.5 text-xs text-black/50">
+            Revenue {fmtPrice(row.revenueCents)} · Landed cost {fmtPrice(landed)} ·{" "}
+            <span className={margin >= 0 ? "font-bold text-green-700" : "font-bold text-red-600"}>
+              {margin >= 0 ? "+" : "−"}{fmtPrice(Math.abs(margin))}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-black/5 px-3 py-1 text-xs font-bold">{row.status}</span>
           <a
             href={`/api/admin/batch/export?batchId=${row.id}`}
             className="rounded-full border border-black/20 px-3 py-1 text-xs font-bold hover:bg-black/5"
           >
-            Export ↓
+            Build Sheet ↓
+          </a>
+          <a
+            href={`/api/admin/batch/supplier-export?batchId=${row.id}`}
+            className="rounded-full border border-black/20 px-3 py-1 text-xs font-bold hover:bg-black/5"
+          >
+            Supplier Order ↓
           </a>
           {(BATCH_NEXT[row.status] ?? []).map((a) => (
             <BatchButton key={a.status} batchId={row.id} action={a} onDone={onSaved} />
@@ -329,6 +386,13 @@ function BatchRowEditor({ row, onSaved }: { row: BatchRow; onSaved: () => void }
             className="rounded-full bg-black/5 px-3 py-1 text-xs font-bold text-black/60 hover:bg-black/10"
           >
             {expanded ? "Close" : "Edit"}
+          </button>
+          <button
+            onClick={remove}
+            disabled={busy}
+            className="rounded-full border border-red-200 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
+          >
+            {busy ? "..." : "Delete"}
           </button>
         </div>
       </div>
@@ -342,17 +406,43 @@ function BatchDetailEditor({ row, onSaved }: { row: BatchRow; onSaved: () => voi
   const [cutoffDate, setCutoffDate] = useState(toDateInput(row.cutoffDate));
   const [pickupStart, setPickupStart] = useState(toDateInput(row.pickupStart));
   const [pickupEnd, setPickupEnd] = useState(toDateInput(row.pickupEnd));
+  const [freight, setFreight] = useState((row.freightCents / 100).toFixed(2));
+  const [tariff, setTariff] = useState((row.tariffCents / 100).toFixed(2));
+  const [other, setOther] = useState((row.otherCostCents / 100).toFixed(2));
+  const [costNotes, setCostNotes] = useState(row.costNotes ?? "");
+  // Unit-cost overrides, keyed by productId, in dollars for editing.
+  const [unitCosts, setUnitCosts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      row.products.map((p) => [p.productId, (((p.overrideCents ?? p.defaultCostCents)) / 100).toFixed(2)])
+    )
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   async function save() {
     setBusy(true);
     setError("");
-    const res = await post("/api/admin/batch", { batchId: row.id, name, cutoffDate, pickupStart, pickupEnd });
+    const res = await post("/api/admin/batch", {
+      batchId: row.id,
+      name,
+      cutoffDate,
+      pickupStart,
+      pickupEnd,
+      freightCents: Math.round(Number(freight || 0) * 100),
+      tariffCents: Math.round(Number(tariff || 0) * 100),
+      otherCostCents: Math.round(Number(other || 0) * 100),
+      costNotes,
+      unitCosts: row.products.map((p) => ({
+        productId: p.productId,
+        unitCostCents: Math.round(Number(unitCosts[p.productId] || 0) * 100),
+      })),
+    });
     setBusy(false);
     if (res.ok) onSaved();
     else setError((await res.json().catch(() => ({})))?.error ?? "Save failed");
   }
+
+  const money = "w-full rounded-lg border border-black/20 px-3 py-2 text-sm text-right";
 
   return (
     <div className="mt-4 grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-4">
@@ -372,6 +462,66 @@ function BatchDetailEditor({ row, onSaved }: { row: BatchRow; onSaved: () => voi
         <span className="mb-1 block text-xs font-bold uppercase text-black/40">Pickup end</span>
         <input type="date" value={pickupEnd} onChange={(e) => setPickupEnd(e.target.value)} className="w-full rounded-lg border border-black/20 px-3 py-2 text-sm" />
       </label>
+
+      {/* Landed cost */}
+      <div className="sm:col-span-4 mt-2 border-t border-black/10 pt-3">
+        <span className="text-xs font-bold uppercase text-black/40">Batch costs (landed)</span>
+      </div>
+      <label className="text-sm">
+        <span className="mb-1 block text-xs font-bold uppercase text-black/40">Freight / shipping $</span>
+        <input type="number" step="0.01" min="0" value={freight} onChange={(e) => setFreight(e.target.value)} className={money} />
+      </label>
+      <label className="text-sm">
+        <span className="mb-1 block text-xs font-bold uppercase text-black/40">Tariffs / duties $</span>
+        <input type="number" step="0.01" min="0" value={tariff} onChange={(e) => setTariff(e.target.value)} className={money} />
+      </label>
+      <label className="text-sm">
+        <span className="mb-1 block text-xs font-bold uppercase text-black/40">Other (fees, tooling) $</span>
+        <input type="number" step="0.01" min="0" value={other} onChange={(e) => setOther(e.target.value)} className={money} />
+      </label>
+      <label className="text-sm">
+        <span className="mb-1 block text-xs font-bold uppercase text-black/40">Notes</span>
+        <input value={costNotes} onChange={(e) => setCostNotes(e.target.value)} placeholder="e.g. wire fee, DHL invoice #" className="w-full rounded-lg border border-black/20 px-3 py-2 text-sm" />
+      </label>
+
+      {/* Per-product unit costs */}
+      {row.products.length > 0 && (
+        <div className="sm:col-span-4">
+          <span className="text-xs font-bold uppercase text-black/40">
+            Unit costs for this order (defaults from Products; edits apply to this batch only)
+          </span>
+          <div className="mt-2 divide-y divide-black/5 rounded-xl border border-black/10">
+            {row.products.map((p) => (
+              <div key={p.productId} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                <div>
+                  <span className="font-semibold">{p.name}</span>{" "}
+                  <span className="text-black/40">× {p.qty}</span>
+                  {p.overrideCents != null && p.overrideCents !== p.defaultCostCents && (
+                    <span className="ml-2 rounded bg-volt/30 px-1.5 py-0.5 text-[10px] font-bold">override</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-black/40">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={unitCosts[p.productId] ?? ""}
+                    onChange={(e) => setUnitCosts((prev) => ({ ...prev, [p.productId]: e.target.value }))}
+                    className="w-24 rounded-lg border border-black/20 px-2 py-1 text-right"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {row.products.length === 0 && (
+        <p className="sm:col-span-4 text-xs text-black/40">
+          No confirmed orders in this batch yet — unit costs appear here once orders come in.
+        </p>
+      )}
+
       <div className="sm:col-span-4 flex items-center gap-3">
         <button onClick={save} disabled={busy} className="rounded-full bg-ink px-5 py-2 text-sm font-bold text-paper hover:bg-ink/80 disabled:opacity-40">
           {busy ? "Saving..." : "Save changes"}

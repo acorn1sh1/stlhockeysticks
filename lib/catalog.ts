@@ -81,12 +81,13 @@ export const COLORS = [
 const CURVES_FULL = ["P92", "P28", "P88", "P92M", "PM9", "P02", "P90TM", "P91A"];
 const CURVES_YOUTH = ["P92", "P28"];
 const HANDS = ["Right", "Left"];
-const PADDLE_SIZES = ['24"', '26"', '28"', '30"'];
+const PADDLE_SIZES = ['21"', '22"', '23"', '24"', '25"', '26"', '27"', '28"'];
 
 const FLEX_SENIOR = [65, 70, 75, 80, 85, 90, 95, 102];
 const FLEX_INT = [45, 50, 55, 60, 65];
 const FLEX_JR = [35, 40, 45, 50, 55];
 const FLEX_YTH = [20, 25, 30, 35];
+const FLEX_GOALIE = [65, 70, 75, 80, 85, 90, 95, 102];
 
 const baseOpts = {
   colors: COLORS,
@@ -245,8 +246,8 @@ export const CATALOG: CatalogItem[] = [
     category: "GOALIE",
     priceCents: 14900,
     badge: "Top Shelf",
-    specs: ["450g", "T1100 + boron carbon", "24K weave", "24\"-30\" paddle"],
-    options: { ...baseOpts, flex: FLEX_SENIOR, curve: ["31-L"], paddleSize: PADDLE_SIZES },
+    specs: ["450g", "T1100 + boron carbon", "24K weave", "21\"-28\" paddle"],
+    options: { ...baseOpts, flex: FLEX_GOALIE, curve: ["P31"], paddleSize: PADDLE_SIZES },
   },
   {
     slug: "performance-goalie-stick",
@@ -256,8 +257,8 @@ export const CATALOG: CatalogItem[] = [
     category: "GOALIE",
     priceCents: 12900,
     badge: "Best Seller",
-    specs: ["480g", "T1100/T800 carbon", "18K weave", "24\"-30\" paddle"],
-    options: { ...baseOpts, flex: FLEX_SENIOR, curve: ["31-L"], paddleSize: PADDLE_SIZES },
+    specs: ["480g", "T1100/T800 carbon", "18K weave", "21\"-28\" paddle"],
+    options: { ...baseOpts, flex: FLEX_GOALIE, curve: ["P31"], paddleSize: PADDLE_SIZES },
   },
   {
     slug: "value-goalie-stick",
@@ -267,8 +268,8 @@ export const CATALOG: CatalogItem[] = [
     category: "GOALIE",
     priceCents: 10900,
     badge: "Best Value",
-    specs: ["520g", "T700 carbon", "18K weave", "24\"-30\" paddle"],
-    options: { ...baseOpts, flex: FLEX_SENIOR, curve: ["31-L"], paddleSize: PADDLE_SIZES },
+    specs: ["520g", "T700 carbon", "18K weave", "21\"-28\" paddle"],
+    options: { ...baseOpts, flex: FLEX_GOALIE, curve: ["P31"], paddleSize: PADDLE_SIZES },
   },
 
   // ---- IN STOCK: fixed flex+curve combos, ships now, no batch wait ----

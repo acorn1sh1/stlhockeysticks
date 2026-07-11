@@ -203,36 +203,36 @@ const products = [
   {
     slug: "elite-goalie-stick",
     name: "Elite Goalie Stick",
-    description: "450g full carbon paddle, 24K weave, 24\"-30\" paddle.",
+    description: "450g full carbon paddle, 24K weave, 21\"-28\" paddle.",
     category: "GOALIE",
     sizingTier: "SENIOR",
     configurable: true,
     badge: "Top Shelf",
-    specs: ["450g", "T1100 + boron carbon", "24K weave", "24\"-30\" paddle"],
+    specs: ["450g", "T1100 + boron carbon", "24K weave", "21\"-28\" paddle"],
     priceCents: 14900,
     preorder: true,
   },
   {
     slug: "performance-goalie-stick",
     name: "Performance Goalie Stick",
-    description: "480g full carbon paddle, 18K weave, 24\"-30\" paddle.",
+    description: "480g full carbon paddle, 18K weave, 21\"-28\" paddle.",
     category: "GOALIE",
     sizingTier: "SENIOR",
     configurable: true,
     badge: "Best Seller",
-    specs: ["480g", "T1100/T800 carbon", "18K weave", "24\"-30\" paddle"],
+    specs: ["480g", "T1100/T800 carbon", "18K weave", "21\"-28\" paddle"],
     priceCents: 12900,
     preorder: true,
   },
   {
     slug: "value-goalie-stick",
     name: "Value Goalie Stick",
-    description: "520g full carbon paddle, 18K weave, 24\"-30\" paddle.",
+    description: "520g full carbon paddle, 18K weave, 21\"-28\" paddle.",
     category: "GOALIE",
     sizingTier: "SENIOR",
     configurable: true,
     badge: "Best Value",
-    specs: ["520g", "T700 carbon", "18K weave", "24\"-30\" paddle"],
+    specs: ["520g", "T700 carbon", "18K weave", "21\"-28\" paddle"],
     priceCents: 10900,
     preorder: true,
   },
@@ -468,8 +468,8 @@ pushOpt("CURVE", ["P92", "P28", "P88", "P92M", "PM9", "P02", "P90TM", "P91A"], {
   category: "FULL_STICK",
   defaultValue: "P92",
 });
-// Goalie paddle "curve"
-pushOpt("CURVE", ["31-L"], { category: "GOALIE", defaultValue: "31-L" });
+// Goalie curve — all goalie sticks are P31
+pushOpt("CURVE", ["P31"], { category: "GOALIE", defaultValue: "P31" });
 
 // Hand
 pushOpt("HAND", ["Right", "Left"], { defaultValue: "Right" });
@@ -493,8 +493,11 @@ pushOpt("LENGTH", ['60"', '57"', '54"'], { sizing: "SENIOR", defaultValue: '60"'
 pushOpt("LENGTH", ['57"', '54"', '51"'], { sizing: "INT", defaultValue: '57"' });
 pushOpt("LENGTH", ['54"', '50"', '46"'], { sizing: "JR", defaultValue: '54"' });
 
-// Paddle size — goalie only
-pushOpt("PADDLE", ['24"', '26"', '28"', '30"'], { category: "GOALIE", defaultValue: '26"' });
+// Paddle size — goalie only, 21"-28" in 1" increments
+pushOpt("PADDLE", ['21"', '22"', '23"', '24"', '25"', '26"', '27"', '28"'], {
+  category: "GOALIE",
+  defaultValue: '26"',
+});
 
 for (const ov of optionValues) {
   await prisma.optionValue.upsert({
@@ -511,6 +514,18 @@ for (const ov of optionValues) {
   });
 }
 console.log(`Seeded ${optionValues.length} option values.`);
+
+// Deactivate goalie option rows no longer offered (old 30" paddle, 31-L curve)
+const goalieKeep = (kind) =>
+  optionValues.filter((o) => o.kind === kind && o.category === "GOALIE").map((o) => o.value);
+await prisma.optionValue.updateMany({
+  where: { category: "GOALIE", kind: "PADDLE", value: { notIn: goalieKeep("PADDLE") } },
+  data: { active: false },
+});
+await prisma.optionValue.updateMany({
+  where: { category: "GOALIE", kind: "CURVE", value: { notIn: goalieKeep("CURVE") } },
+  data: { active: false },
+});
 
 // Retire any old slugs no longer sold
 await prisma.product.updateMany({

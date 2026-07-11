@@ -16,6 +16,7 @@ export type ProductRow = {
   imageUrl: string | null;
   configurable: boolean;
   priceCents: number;
+  costCents: number;
   inStock: number;
   preorder: boolean;
   active: boolean;
@@ -25,6 +26,16 @@ export type ProductRow = {
   fixedColor: string | null;
   fixedLength: string | null;
   hasOrders: boolean;
+};
+
+// Option catalog value (subset) used by the per-product override editor.
+export type OptionValueLite = {
+  id: string;
+  kind: string;
+  value: string;
+  label: string | null;
+  sizing: string;
+  category: string;
 };
 
 async function post(body: unknown) {
@@ -39,10 +50,16 @@ export default function AdminProducts({
   products,
   categories,
   sizingTiers,
+  optionValues,
+  productOptions,
+  attributeKinds,
 }: {
   products: ProductRow[];
   categories: string[];
   sizingTiers: string[];
+  optionValues: OptionValueLite[];
+  productOptions: Record<string, string[]>; // productId → pinned optionValueId[]
+  attributeKinds: string[]; // ordered AttributeKind keys
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
@@ -80,6 +97,7 @@ export default function AdminProducts({
               <th className="p-3">Product</th>
               <th className="p-3">Category</th>
               <th className="p-3">Price</th>
+              <th className="p-3">Cost</th>
               <th className="p-3">Active</th>
               <th className="p-3"></th>
             </tr>
@@ -91,6 +109,9 @@ export default function AdminProducts({
                 row={p}
                 categories={categories}
                 sizingTiers={sizingTiers}
+                optionValues={optionValues}
+                overrideIds={productOptions[p.id] ?? []}
+                attributeKinds={attributeKinds}
                 onSaved={() => router.refresh()}
               />
             ))}
@@ -105,21 +126,34 @@ function ProductRowEditor({
   row,
   categories,
   sizingTiers,
+  optionValues,
+  overrideIds,
+  attributeKinds,
   onSaved,
 }: {
   row: ProductRow;
   categories: string[];
   sizingTiers: string[];
+  optionValues: OptionValueLite[];
+  overrideIds: string[];
+  attributeKinds: string[];
   onSaved: () => void;
 }) {
   const [dollars, setDollars] = useState((row.priceCents / 100).toFixed(2));
+  const [costDollars, setCostDollars] = useState((row.costCents / 100).toFixed(2));
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const dirty = Math.round(Number(dollars) * 100) !== row.priceCents;
+  const dirty =
+    Math.round(Number(dollars) * 100) !== row.priceCents ||
+    Math.round(Number(costDollars) * 100) !== row.costCents;
 
   async function savePrice() {
     setBusy(true);
-    const res = await post({ slug: row.slug, priceCents: Math.round(Number(dollars) * 100) });
+    const res = await post({
+      slug: row.slug,
+      priceCents: Math.round(Number(dollars) * 100),
+      costCents: Math.round(Number(costDollars) * 100),
+    });
     setBusy(false);
     if (res.ok) onSaved();
   }
@@ -157,6 +191,19 @@ function ProductRowEditor({
           </div>
         </td>
         <td className="p-3">
+          <div className="flex items-center gap-1" title="Default supplier unit cost — used for batch margin & the supplier order sheet. Override per batch from the Batches panel.">
+            <span className="text-black/40">$</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={costDollars}
+              onChange={(e) => setCostDollars(e.target.value)}
+              className="w-20 rounded-lg border border-black/20 px-2 py-1 text-right"
+            />
+          </div>
+        </td>
+        <td className="p-3">
           <button
             onClick={toggleActive}
             className={`rounded-full px-3 py-1 text-xs font-bold ${
@@ -177,11 +224,14 @@ function ProductRowEditor({
       </tr>
       {expanded && (
         <tr className="border-b border-black/5 last:border-0">
-          <td colSpan={5} className="bg-black/[0.02] p-4">
+          <td colSpan={6} className="bg-black/[0.02] p-4">
             <ProductDetailEditor
               row={row}
               categories={categories}
               sizingTiers={sizingTiers}
+              optionValues={optionValues}
+              overrideIds={overrideIds}
+              attributeKinds={attributeKinds}
               onSaved={onSaved}
             />
           </td>
@@ -195,11 +245,17 @@ function ProductDetailEditor({
   row,
   categories,
   sizingTiers,
+  optionValues,
+  overrideIds,
+  attributeKinds,
   onSaved,
 }: {
   row: ProductRow;
   categories: string[];
   sizingTiers: string[];
+  optionValues: OptionValueLite[];
+  overrideIds: string[];
+  attributeKinds: string[];
   onSaved: () => void;
 }) {
   const [f, setF] = useState({
@@ -293,13 +349,24 @@ function ProductDetailEditor({
           Configurable (builds flex/curve/hand/color/length picker from Pre-Order Options)
         </label>
         {f.configurable && (
-          <label className="text-sm">
-            <span className="mb-1 block text-xs font-bold uppercase text-black/40">Sizing tier (scopes flex &amp; length)</span>
-            <select value={f.sizingTier} onChange={(e) => set("sizingTier", e.target.value)} className="w-full max-w-xs rounded-lg border border-black/20 px-3 py-2 text-sm">
-              <option value="">None</option>
-              {sizingTiers.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </label>
+          <>
+            <label className="text-sm">
+              <span className="mb-1 block text-xs font-bold uppercase text-black/40">Sizing tier (scopes flex &amp; length)</span>
+              <select value={f.sizingTier} onChange={(e) => set("sizingTier", e.target.value)} className="w-full max-w-xs rounded-lg border border-black/20 px-3 py-2 text-sm">
+                <option value="">None</option>
+                {sizingTiers.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            <ProductOptionOverrides
+              productId={row.id}
+              tier={f.sizingTier}
+              category={f.category}
+              optionValues={optionValues}
+              attributeKinds={attributeKinds}
+              initialOverrideIds={overrideIds}
+              onSaved={onSaved}
+            />
+          </>
         )}
       </div>
 
@@ -359,6 +426,196 @@ function ProductDetailEditor({
   );
 }
 
+// Phase 2 — per-stick option override editor. By default a configurable stick
+// inherits its options from the tier/category-scoped Pre-Order Options. Flip an
+// attribute to "Custom" to pin an exact subset for THIS stick only; attributes
+// left on "Inherit" keep following the shared matrix. Saves the full pinned set
+// to /api/admin/product-options.
+function ProductOptionOverrides({
+  productId,
+  tier,
+  category,
+  optionValues,
+  attributeKinds,
+  initialOverrideIds,
+  onSaved,
+}: {
+  productId: string;
+  tier: string; // selected sizing tier ("" = none)
+  category: string;
+  optionValues: OptionValueLite[];
+  attributeKinds: string[];
+  initialOverrideIds: string[];
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(initialOverrideIds.length > 0);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  // Candidate values for a kind = same scoping rule as the storefront resolver.
+  const candidatesFor = (kind: string) =>
+    optionValues
+      .filter(
+        (o) =>
+          o.kind === kind &&
+          (o.sizing === "ALL" || o.sizing === tier) &&
+          (o.category === "ALL" || o.category === category)
+      )
+      .sort((a, b) => a.value.localeCompare(b.value, undefined, { numeric: true }));
+
+  // Kinds that actually have candidates under this scope.
+  const kinds = attributeKinds.filter((k) => candidatesFor(k).length > 0);
+
+  const initSet = new Set(initialOverrideIds);
+  // Per-kind state: custom flag + the checked id set. A kind starts "custom"
+  // only if it already has pinned ids; otherwise it inherits and its checkbox
+  // set is pre-filled with the full candidate list (ready if you flip it on).
+  const [state, setState] = useState<Record<string, { custom: boolean; checked: Set<string> }>>(
+    () => {
+      const s: Record<string, { custom: boolean; checked: Set<string> }> = {};
+      for (const k of attributeKinds) {
+        const cand = optionValues.filter(
+          (o) =>
+            o.kind === k &&
+            (o.sizing === "ALL" || o.sizing === tier) &&
+            (o.category === "ALL" || o.category === category)
+        );
+        const pinned = cand.filter((c) => initSet.has(c.id)).map((c) => c.id);
+        s[k] = pinned.length
+          ? { custom: true, checked: new Set(pinned) }
+          : { custom: false, checked: new Set(cand.map((c) => c.id)) };
+      }
+      return s;
+    }
+  );
+
+  const setKind = (k: string, patch: Partial<{ custom: boolean; checked: Set<string> }>) =>
+    setState((p) => ({ ...p, [k]: { ...p[k], ...patch } }));
+
+  const toggleVal = (k: string, id: string) =>
+    setState((p) => {
+      const next = new Set(p[k].checked);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return { ...p, [k]: { ...p[k], checked: next } };
+    });
+
+  const customCount = kinds.filter((k) => state[k]?.custom).length;
+
+  async function save() {
+    setBusy(true);
+    setMsg("");
+    // Only pinned kinds contribute ids; inherited kinds send nothing.
+    const ids: string[] = [];
+    for (const k of kinds) {
+      if (state[k]?.custom) ids.push(...state[k].checked);
+    }
+    const res = await fetch("/api/admin/product-options", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId, optionValueIds: ids }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      setMsg("Saved");
+      onSaved();
+    } else {
+      setMsg((await res.json().catch(() => ({})))?.error ?? "Save failed");
+    }
+  }
+
+  return (
+    <div className="sm:col-span-2 rounded-xl border border-black/10 bg-black/[0.02] p-3">
+      <label className="flex items-center gap-2 text-sm font-semibold">
+        <input type="checkbox" checked={open} onChange={(e) => setOpen(e.target.checked)} />
+        Customize options for this stick
+        {customCount > 0 && (
+          <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold text-paper">
+            {customCount} custom
+          </span>
+        )}
+      </label>
+      {!open ? (
+        <p className="mt-1 text-xs text-black/40">
+          Off = inherits every attribute from the{" "}
+          {tier || "selected"} tier in Pre-Order Options.
+        </p>
+      ) : kinds.length === 0 ? (
+        <p className="mt-2 text-xs text-black/40">
+          No option values scoped to this tier/category yet — add them in
+          Pre-Order Options first.
+        </p>
+      ) : (
+        <div className="mt-3 space-y-3">
+          {kinds.map((k) => {
+            const st = state[k];
+            const cand = candidatesFor(k);
+            return (
+              <div key={k} className="rounded-lg border border-black/10 bg-white p-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wide text-black/50">{k}</span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setKind(k, { custom: false })}
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${!st?.custom ? "bg-ink text-paper" : "bg-black/10 text-black/50"}`}
+                    >
+                      Inherit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKind(k, { custom: true })}
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${st?.custom ? "bg-ink text-paper" : "bg-black/10 text-black/50"}`}
+                    >
+                      Custom
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {cand.map((c) => {
+                    const on = st?.custom ? st.checked.has(c.id) : true;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        disabled={!st?.custom}
+                        onClick={() => toggleVal(k, c.id)}
+                        className={[
+                          "rounded-full border px-2.5 py-1 text-xs font-semibold",
+                          !st?.custom
+                            ? "border-black/10 bg-black/[0.03] text-black/40"
+                            : on
+                              ? "border-ink bg-ink text-paper"
+                              : "border-black/20 bg-white text-black/50 line-through",
+                        ].join(" ")}
+                      >
+                        {c.label ?? c.value}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={save}
+              disabled={busy}
+              className="rounded-full bg-ink px-4 py-1.5 text-xs font-bold text-paper hover:bg-ink/80 disabled:opacity-40"
+            >
+              {busy ? "Saving…" : "Save option overrides"}
+            </button>
+            {msg && <span className="text-xs text-black/50">{msg}</span>}
+            <span className="text-xs text-black/40">
+              Inherited attributes follow the shared matrix; only Custom ones are pinned.
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AddProduct({
   categories,
   sizingTiers,
@@ -413,7 +670,19 @@ function AddProduct({
       </select>
       <input type="number" step="0.01" placeholder="Price (USD)" value={f.price} onChange={(e) => set("price", e.target.value)} className="rounded-lg border border-black/20 px-3 py-2 text-sm" />
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={f.preorder} onChange={(e) => set("preorder", e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={f.preorder}
+          onChange={(e) =>
+            setF((p) => ({
+              ...p,
+              preorder: e.target.checked,
+              // A pre-order stick is built-to-order → configure it from the
+              // Pre-Order Options matrix by default (admin can still opt out).
+              configurable: e.target.checked ? true : p.configurable,
+            }))
+          }
+        />
         Pre-order (built to order, no live stock)
       </label>
       {!f.preorder && (
@@ -424,10 +693,16 @@ function AddProduct({
         Configurable — build flex/curve/hand/color/length picker from Pre-Order Options
       </label>
       {f.configurable && (
-        <select value={f.sizingTier} onChange={(e) => set("sizingTier", e.target.value)} className="rounded-lg border border-black/20 px-3 py-2 text-sm">
-          <option value="">Sizing tier (scopes flex &amp; length)</option>
-          {sizingTiers.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <div className="sm:col-span-2">
+          <select value={f.sizingTier} onChange={(e) => set("sizingTier", e.target.value)} className="w-full rounded-lg border border-black/20 px-3 py-2 text-sm">
+            <option value="">Sizing tier (scopes flex &amp; length)</option>
+            {sizingTiers.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <p className="mt-1 text-xs text-black/40">
+            Options are inherited from the {f.sizingTier || "selected"} tier in
+            Pre-Order Options — no per-stick picking needed.
+          </p>
+        </div>
       )}
       <div className="sm:col-span-2 flex items-center gap-3">
         <button onClick={submit} disabled={busy || !f.slug || !f.name || !f.price} className="rounded-full bg-ink px-5 py-2 text-sm font-bold text-paper hover:bg-ink/80 disabled:opacity-40">

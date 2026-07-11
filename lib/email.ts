@@ -10,6 +10,7 @@ export async function sendEmail(opts: {
   to?: string;
   subject: string;
   html: string;
+  replyTo?: string;
 }): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   const to = opts.to ?? process.env.ALERT_EMAIL;
@@ -25,7 +26,13 @@ export async function sendEmail(opts: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from, to, subject: opts.subject, html: opts.html }),
+      body: JSON.stringify({
+        from,
+        to,
+        subject: opts.subject,
+        html: opts.html,
+        ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
+      }),
     });
     if (!res.ok) {
       console.error("Resend error", res.status, await res.text());

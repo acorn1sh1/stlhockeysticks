@@ -64,6 +64,11 @@ export async function POST(req: Request) {
     if (!Number.isFinite(p)) return NextResponse.json({ error: "Bad price" }, { status: 400 });
     data.priceCents = p;
   }
+  if (b.costCents != null) {
+    const c = Math.max(0, Math.floor(Number(b.costCents)));
+    if (!Number.isFinite(c)) return NextResponse.json({ error: "Bad cost" }, { status: 400 });
+    data.costCents = c;
+  }
   if (b.inStock != null) data.inStock = Math.max(0, Math.floor(Number(b.inStock)));
   if (typeof b.preorder === "boolean") {
     data.preorder = b.preorder;
@@ -96,9 +101,15 @@ export async function POST(req: Request) {
           sizingTier: (data.sizingTier as string | null) ?? null,
           specs: (data.specs as string[]) ?? [],
           badge: (data.badge as string | null) ?? null,
-          configurable: (data.configurable as boolean) ?? false,
+          // Pre-order (built-to-order) sticks default to configurable so the
+          // shopper always gets the flex/curve/hand/color picker, derived from
+          // the tier/category Pre-Order Options matrix — no per-stick setup.
+          configurable:
+            (data.configurable as boolean) ??
+            ((data.type as string) ?? "IN_STOCK") === "PREORDER",
           imageUrl: (data.imageUrl as string | null) ?? null,
           priceCents: data.priceCents as number,
+          costCents: (data.costCents as number) ?? 0,
           inStock: (data.inStock as number) ?? 0,
           preorder: (data.preorder as boolean) ?? false,
           type: (data.type as "PREORDER" | "IN_STOCK") ?? "IN_STOCK",

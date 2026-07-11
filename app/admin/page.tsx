@@ -9,6 +9,8 @@ import AdminSizingTiers from "@/components/admin/AdminSizingTiers";
 import AdminAttributeKinds from "@/components/admin/AdminAttributeKinds";
 import AdminCoupons from "@/components/admin/AdminCoupons";
 import AdminWarranty from "@/components/admin/AdminWarranty";
+import AdminAccounting, { type MonthlyRow } from "@/components/admin/AdminAccounting";
+import { REVENUE_STATUSES } from "@/lib/accounting";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +50,93 @@ export default async function AdminPage() {
   const batchRows = await prisma.batch.findMany({
     orderBy: { cutoffDate: "desc" },
     take: 12,
-    include: { _count: { select: { orders: true } } },
+    include: { _count: { select: { orders: true } }, unitCosts: true },
   });
+
+  // ---- Accounting inputs ----
+  // Every revenue-recognized order with per-item product costs. COGS uses the
+  // batch's unit-cost override when one exists, else the product default.
+  const acctOrders = await prisma.order.findMany({
+    where: { status: { in: [...REVENUE_STATUSES] } },
+    select: {
+      subtotalCents: true,
+      createdAt: true,
+      batchId: true,
+      items: {
+        select: {
+          quantity: true,
+          productId: true,
+          product: { select: { name: true, costCents: true } },
+        },
+      },
+    },
+  });
+  const allBatchCosts = await prisma.batch.findMany({
+    select: {
+      id: true,
+      cutoffDate: true,
+      freightCents: true,
+      tariffCents: true,
+      otherCostCents: true,
+      unitCosts: { select: { productId: true, unitCostCents: true } },
+    },
+  });
+  const expenseRows = await prisma.expense.findMany({
+    orderBy: { date: "desc" },
+    take: 200,
+    include: { batch: { select: { name: true } } },
+  });
+
+  const overridesByBatch = new Map(
+    allBatchCosts.map((b) => [b.id, new Map(b.unitCosts.map((u) => [u.productId, u.unitCostCents]))])
+  );
+
+  // Confirmed units per batch, aggregated by product (drives the per-batch
+  // unit-cost editor and the batch margin line) + monthly P&L rollup.
+  const batchProducts = new Map<
+    string,
+    Map<string, { name: string; qty: number; defaultCostCents: number }>
+  >();
+  const batchRevenue = new Map<string, number>();
+  const monthlyMap = new Map<string, MonthlyRow>();
+  const month = (d: Date) => d.toISOString().slice(0, 7);
+  const bump = (m: string, k: keyof Omit<MonthlyRow, "month">, v: number) => {
+    const row =
+      monthlyMap.get(m) ??
+      ({ month: m, revenueCents: 0, cogsCents: 0, batchCostsCents: 0, expensesCents: 0 } as MonthlyRow);
+    row[k] += v;
+    monthlyMap.set(m, row);
+  };
+
+  for (const o of acctOrders) {
+    const mk = month(o.createdAt);
+    bump(mk, "revenueCents", o.subtotalCents);
+    if (o.batchId) batchRevenue.set(o.batchId, (batchRevenue.get(o.batchId) ?? 0) + o.subtotalCents);
+    const overrides = o.batchId ? overridesByBatch.get(o.batchId) : undefined;
+    for (const it of o.items) {
+      const unit = overrides?.get(it.productId) ?? it.product.costCents;
+      bump(mk, "cogsCents", unit * it.quantity);
+      if (o.batchId) {
+        const products = batchProducts.get(o.batchId) ?? new Map();
+        const p = products.get(it.productId) ?? {
+          name: it.product.name,
+          qty: 0,
+          defaultCostCents: it.product.costCents,
+        };
+        p.qty += it.quantity;
+        products.set(it.productId, p);
+        batchProducts.set(o.batchId, products);
+      }
+    }
+  }
+  for (const b of allBatchCosts) {
+    const extra = b.freightCents + b.tariffCents + b.otherCostCents;
+    if (extra) bump(month(b.cutoffDate), "batchCostsCents", extra);
+  }
+  for (const e of expenseRows) {
+    bump(month(e.date), "expensesCents", e.amountCents);
+  }
+  const monthly = [...monthlyMap.values()].sort((a, b) => b.month.localeCompare(a.month));
 
   const orderRows = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
@@ -60,6 +147,15 @@ export default async function AdminPage() {
   const optionValues = await prisma.optionValue.findMany({
     orderBy: [{ kind: "asc" }, { sizing: "asc" }, { sortOrder: "asc" }],
   });
+
+  // Phase 2: per-product option overrides, grouped productId → optionValueId[].
+  const productOptionRows = await prisma.productOption.findMany({
+    select: { productId: true, optionValueId: true },
+  });
+  const productOptionsMap: Record<string, string[]> = {};
+  for (const r of productOptionRows) {
+    (productOptionsMap[r.productId] ||= []).push(r.optionValueId);
+  }
 
   const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: "desc" } });
 
@@ -73,15 +169,33 @@ export default async function AdminPage() {
     <div className="space-y-12 pb-16">
       <AdminDashboard
         stock={stockProducts}
-        batches={batchRows.map((b) => ({
-          id: b.id,
-          name: b.name,
-          status: b.status,
-          cutoffDate: b.cutoffDate.toISOString(),
-          pickupStart: b.pickupStart.toISOString(),
-          pickupEnd: b.pickupEnd.toISOString(),
-          orderCount: b._count.orders,
-        }))}
+        batches={batchRows.map((b) => {
+          const overrides = new Map(b.unitCosts.map((u) => [u.productId, u.unitCostCents]));
+          const products = [...(batchProducts.get(b.id) ?? new Map()).entries()].map(
+            ([productId, p]) => ({
+              productId,
+              name: p.name,
+              qty: p.qty,
+              defaultCostCents: p.defaultCostCents,
+              overrideCents: overrides.get(productId) ?? null,
+            })
+          );
+          return {
+            id: b.id,
+            name: b.name,
+            status: b.status,
+            cutoffDate: b.cutoffDate.toISOString(),
+            pickupStart: b.pickupStart.toISOString(),
+            pickupEnd: b.pickupEnd.toISOString(),
+            orderCount: b._count.orders,
+            revenueCents: batchRevenue.get(b.id) ?? 0,
+            freightCents: b.freightCents,
+            tariffCents: b.tariffCents,
+            otherCostCents: b.otherCostCents,
+            costNotes: b.costNotes,
+            products: products.sort((a, z) => a.name.localeCompare(z.name)),
+          };
+        })}
         orders={orderRows.map((o) => ({
           id: o.id,
           name: o.name,
@@ -95,6 +209,19 @@ export default async function AdminPage() {
       />
 
       <div className="mx-auto max-w-5xl space-y-12 px-4">
+        <AdminAccounting
+          monthly={monthly}
+          expenses={expenseRows.map((e) => ({
+            id: e.id,
+            date: e.date.toISOString(),
+            category: e.category,
+            description: e.description,
+            amountCents: e.amountCents,
+            batchId: e.batchId,
+            batchName: e.batch?.name ?? null,
+          }))}
+          batches={batchRows.map((b) => ({ id: b.id, name: b.name }))}
+        />
         <AdminProducts
           products={allProducts.map((p) => ({
             id: p.id,
@@ -108,6 +235,7 @@ export default async function AdminPage() {
             imageUrl: p.imageUrl,
             configurable: p.configurable,
             priceCents: p.priceCents,
+            costCents: p.costCents,
             inStock: p.inStock,
             preorder: p.preorder,
             active: p.active,
@@ -120,6 +248,16 @@ export default async function AdminPage() {
           }))}
           categories={categoryRows.map((c) => c.key)}
           sizingTiers={sizingTierRows.map((t) => t.key)}
+          optionValues={optionValues.map((o) => ({
+            id: o.id,
+            kind: o.kind,
+            value: o.value,
+            label: o.label,
+            sizing: o.sizing,
+            category: o.category,
+          }))}
+          productOptions={productOptionsMap}
+          attributeKinds={attributeKindRows.filter((k) => k.active).map((k) => k.key)}
         />
         <AdminCategories
           categories={categoryRows.map((c) => ({

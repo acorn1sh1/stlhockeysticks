@@ -16,7 +16,42 @@ model Batch {
   pickupEnd    DateTime
   status       BatchStatus @default(OPEN)
   orders       Order[]
+  // Landed-cost tracking for the supplier order behind this batch.
+  freightCents   Int      @default(0) // shipping/freight from supplier
+  tariffCents    Int      @default(0) // import tariffs/duties
+  otherCostCents Int      @default(0) // brokerage, logo tooling, wire fees, etc.
+  costNotes      String?
+  unitCosts      BatchUnitCost[] // per-product cost overrides for this order
+  expenses       Expense[] // ledger expenses attributed to this batch
   createdAt    DateTime @default(now())
+}
+
+// Per-batch override of a product's unit cost — supplier quotes drift
+// between orders. Falls back to Product.costCents when absent.
+model BatchUnitCost {
+  id            String  @id @default(cuid())
+  batchId       String
+  batch         Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitCostCents Int
+
+  @@unique([batchId, productId])
+}
+
+// General-ledger expense line (the "everything else" of the books:
+// packaging, marketing, Clover fees, gas, tools...). Optionally tied to a
+// batch so landed cost per batch stays complete. Category is free text
+// validated against EXPENSE_CATEGORIES in the API layer.
+model Expense {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  category    String // SHIPPING | TARIFFS | SUPPLIES | FEES | MARKETING | EQUIPMENT | OTHER
+  description String
+  amountCents Int
+  batchId     String?
+  batch       Batch?   @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
 }
 
 enum BatchStatus {
@@ -38,6 +73,7 @@ model Product {
   configurable Boolean @default(false) // true = build the flex/curve/hand/color/length matrix from OptionValue at render time, even if this slug isn't in the static lib/catalog.ts fixture
   type        ProductType @default(PREORDER) // PREORDER = configurable; IN_STOCK = fixed SKU
   priceCents  Int
+  costCents   Int      @default(0) // default supplier unit cost; BatchUnitCost overrides per order
   imageUrl    String?
   clubName    String? // for club-customized mini sticks
   inStock     Int      @default(0) // on-hand inventory (IN_STOCK only)
@@ -50,6 +86,8 @@ model Product {
   fixedColor  String?
   fixedLength String?
   orderItems  OrderItem[]
+  batchUnitCosts BatchUnitCost[]
+  productOptions ProductOption[] // per-stick option overrides (Phase 2)
   createdAt   DateTime @default(now())
 }
 
@@ -122,8 +160,26 @@ model OptionValue {
   sortOrder     Int        @default(0)
   active        Boolean    @default(true)
   createdAt     DateTime   @default(now())
+  productOptions ProductOption[]
 
   @@unique([kind, value, sizing, category])
+}
+
+// Phase 2 per-product option override. Normally a configurable product
+// inherits its option set from the tier/category-scoped OptionValue rows
+// (see lib/options.ts). When a specific stick must differ (e.g. a shorter
+// curve list), admin pins the exact OptionValues here. Resolution rule: if a
+// product has ANY ProductOption rows for a given attribute kind, those rows
+// REPLACE the scoped set for that kind only; all other kinds still inherit.
+model ProductOption {
+  id            String      @id @default(cuid())
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  optionValueId String
+  optionValue   OptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@unique([productId, optionValueId])
 }
 
 model Order {

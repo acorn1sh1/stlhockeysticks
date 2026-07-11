@@ -88,7 +88,7 @@ describe("validateOptions", () => {
   });
 
   it("requires a paddle size for goalie sticks", () => {
-    const g = { flex: "85", curve: "31-L", hand: "Right" };
+    const g = { flex: "85", curve: "P31", hand: "Right" };
     expect(validateOptions(goalie, g)).toBe("Invalid paddle size");
     expect(validateOptions(goalie, { ...g, paddleSize: '26"' })).toBeNull();
   });

@@ -28,6 +28,19 @@ export async function POST(req: Request) {
     cutoffDate?: string;
     pickupStart?: string;
     pickupEnd?: string;
+    // Landed-cost fields (already dollars→cents converted client-side)
+    freightCents?: number;
+    tariffCents?: number;
+    otherCostCents?: number;
+    costNotes?: string;
+    // Per-product unit-cost overrides for this batch's supplier order
+    unitCosts?: { productId: string; unitCostCents: number }[];
+  };
+
+  const cents = (v: unknown): number | null => {
+    if (v == null) return null;
+    const n = Math.max(0, Math.floor(Number(v)));
+    return Number.isFinite(n) ? n : null;
   };
 
   try {
@@ -46,7 +59,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // Edit an existing batch's details
+    // Edit an existing batch's details / costs
     if (b.batchId) {
       const data: Record<string, unknown> = {};
       if (typeof b.name === "string" && b.name.trim()) data.name = b.name.trim().slice(0, 100);
@@ -56,10 +69,32 @@ export async function POST(req: Request) {
       if (cutoffDate) data.cutoffDate = cutoffDate;
       if (pickupStart) data.pickupStart = pickupStart;
       if (pickupEnd) data.pickupEnd = pickupEnd;
-      if (!Object.keys(data).length) {
+      const freight = cents(b.freightCents);
+      const tariff = cents(b.tariffCents);
+      const other = cents(b.otherCostCents);
+      if (freight != null) data.freightCents = freight;
+      if (tariff != null) data.tariffCents = tariff;
+      if (other != null) data.otherCostCents = other;
+      if (typeof b.costNotes === "string") data.costNotes = b.costNotes.slice(0, 500) || null;
+
+      const unitCosts = Array.isArray(b.unitCosts) ? b.unitCosts : null;
+      if (!Object.keys(data).length && !unitCosts) {
         return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
       }
-      await prisma.batch.update({ where: { id: b.batchId }, data });
+      if (Object.keys(data).length) {
+        await prisma.batch.update({ where: { id: b.batchId }, data });
+      }
+      if (unitCosts) {
+        for (const uc of unitCosts) {
+          const c = cents(uc?.unitCostCents);
+          if (typeof uc?.productId !== "string" || !uc.productId || c == null) continue;
+          await prisma.batchUnitCost.upsert({
+            where: { batchId_productId: { batchId: b.batchId, productId: uc.productId } },
+            create: { batchId: b.batchId, productId: uc.productId, unitCostCents: c },
+            update: { unitCostCents: c },
+          });
+        }
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -79,5 +114,37 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("admin batch error", e);
     return NextResponse.json({ error: "Save failed" }, { status: 500 });
+  }
+}
+
+// Remove a batch. Blocked when orders reference it unless ?force=1 —
+// force detaches those orders (batchId → null, order history intact)
+// before deleting. Unit-cost overrides cascade-delete; ledger expenses
+// keep their row but lose the batch link (SetNull).
+export async function DELETE(req: Request) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const url = new URL(req.url);
+  const batchId = url.searchParams.get("batchId");
+  const force = url.searchParams.get("force") === "1";
+  if (!batchId) return NextResponse.json({ error: "batchId required" }, { status: 400 });
+
+  try {
+    const orderCount = await prisma.order.count({ where: { batchId } });
+    if (orderCount > 0 && !force) {
+      return NextResponse.json(
+        { error: `${orderCount} order(s) are in this batch. Delete anyway to detach them (orders are kept).`, orderCount },
+        { status: 409 }
+      );
+    }
+    if (orderCount > 0) {
+      await prisma.order.updateMany({ where: { batchId }, data: { batchId: null } });
+    }
+    await prisma.batch.delete({ where: { id: batchId } });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("admin batch delete error", e);
+    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 }

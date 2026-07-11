@@ -60,25 +60,31 @@ export async function POST(req: Request) {
     if (!KINDS.includes(kind) || !value) {
       return NextResponse.json({ error: "kind + value required" }, { status: 400 });
     }
-    const sizing = SIZINGS.includes(String(b.sizing)) ? String(b.sizing) : "ALL";
+    // Multi-tier bulk add: accept `sizings: string[]` and fan out one
+    // OptionValue per selected tier. Falls back to single `sizing` (or ALL)
+    // for back-compat. "ALL" in the list collapses to a single ALL row.
+    const rawSizings: string[] = Array.isArray(b.sizings)
+      ? (b.sizings as unknown[]).map(String)
+      : [String(b.sizing ?? "ALL")];
+    let sizingList = [...new Set(rawSizings.filter((s) => SIZINGS.includes(s)))];
+    if (sizingList.includes("ALL") || sizingList.length === 0) sizingList = ["ALL"];
+
     const category = CATEGORIES.includes(String(b.category)) ? String(b.category) : "ALL";
     const upchargeCents = Math.max(0, Math.floor(Number(b.upchargeCents ?? 0)) || 0);
+    const label = typeof b.label === "string" && b.label ? b.label.slice(0, 60) : null;
+    const sortOrder = Math.floor(Number(b.sortOrder ?? 99)) || 99;
 
-    await prisma.optionValue.upsert({
-      where: { kind_value_sizing_category: { kind, value, sizing, category } },
-      update: { active: true, upchargeCents },
-      create: {
-        kind,
-        value,
-        sizing,
-        category,
-        upchargeCents,
-        label: typeof b.label === "string" && b.label ? b.label.slice(0, 60) : null,
-        sortOrder: Math.floor(Number(b.sortOrder ?? 99)) || 99,
-      },
-    });
+    await prisma.$transaction(
+      sizingList.map((sizing) =>
+        prisma.optionValue.upsert({
+          where: { kind_value_sizing_category: { kind, value, sizing, category } },
+          update: { active: true, upchargeCents },
+          create: { kind, value, sizing, category, upchargeCents, label, sortOrder },
+        })
+      )
+    );
     invalidateOptionCache();
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, count: sizingList.length });
   } catch (e) {
     console.error("admin options error", e);
     return NextResponse.json({ error: "Save failed" }, { status: 500 });
