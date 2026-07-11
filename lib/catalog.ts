@@ -62,7 +62,7 @@ export const EMPTY_OPTIONS: StickOptions = {
   curve: [],
   hand: [],
   colors: [],
-  colorUpchargeCents: 1000,
+  colorUpchargeCents: 0,
   nameUpchargeCents: 1000,
 };
 
@@ -75,7 +75,7 @@ export const COLORS = [
   "Green",
   "Brown",
   "Purple",
-  "Silver",
+  "Pink",
 ];
 
 const CURVES_FULL = ["P92", "P28", "P88", "P92M", "PM9", "P02", "P90TM", "P91A"];
@@ -91,7 +91,7 @@ const FLEX_GOALIE = [65, 70, 75, 80, 85, 90, 95, 102];
 
 const baseOpts = {
   colors: COLORS,
-  colorUpchargeCents: 1000,
+  colorUpchargeCents: 0,
   nameUpchargeCents: 1000,
   hand: HANDS,
 };

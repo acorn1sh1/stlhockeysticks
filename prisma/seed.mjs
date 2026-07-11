@@ -477,15 +477,15 @@ pushOpt("CURVE", ["P31"], { category: "GOALIE", defaultValue: "P31" });
 // Hand
 pushOpt("HAND", ["Right", "Left"], { defaultValue: "Right" });
 
-// Color — first (Black) is standard/no upcharge; others +$10
-["Black", "Red", "Golden", "Transparent Blue", "Navy Blue", "Green", "Brown", "Purple", "Silver"].forEach(
+// Color — all colors included, no upcharge. Black is the default.
+["Black", "Red", "Golden", "Transparent Blue", "Navy Blue", "Green", "Brown", "Purple", "Pink"].forEach(
   (c, i) =>
     optionValues.push({
       kind: "COLOR",
       value: c,
       sizing: "ALL",
       category: "ALL",
-      upchargeCents: i === 0 ? 0 : 1000,
+      upchargeCents: 0,
       isDefault: i === 0,
       sortOrder: i,
     })
