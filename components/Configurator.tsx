@@ -151,7 +151,7 @@ export default function Configurator({ item }: { item: CatalogItem }) {
         <input
           value={customName}
           onChange={(e) => setCustomName(e.target.value.slice(0, 20))}
-          placeholder="e.g. GRETZKY 99"
+          placeholder="Name or number"
           className="mt-2 w-full rounded-lg border border-black/20 px-3 py-2 font-semibold uppercase tracking-wide"
         />
       </div>
