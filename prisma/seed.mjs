@@ -457,17 +457,20 @@ const pushOpt = (kind, values, extra = {}) =>
     })
   );
 
-// Flex — per sizing tier
-pushOpt("FLEX", [65, 70, 75, 80, 85, 90, 95, 102], { sizing: "SENIOR", defaultValue: 85 });
+// Flex — per sizing tier. Senior is scoped FULL_STICK so goalie doesn't borrow
+// it; goalie gets its own set (matches the official size table).
+pushOpt("FLEX", [65, 75, 85, 95, 102, 110, 112], { sizing: "SENIOR", category: "FULL_STICK", defaultValue: 85 });
 pushOpt("FLEX", [45, 50, 55, 60, 65], { sizing: "INT", defaultValue: 55 });
 pushOpt("FLEX", [35, 40, 45, 50, 55], { sizing: "JR", defaultValue: 45 });
 pushOpt("FLEX", [20, 25, 30, 35], { sizing: "YTH", defaultValue: 30 });
+pushOpt("FLEX", [65, 70, 75, 80, 85, 90, 95, 102], { category: "GOALIE", defaultValue: 85 });
 
-// Curve — full sticks vs youth/junior subset
-pushOpt("CURVE", ["P92", "P28", "P88", "P92M", "PM9", "P02", "P90TM", "P91A"], {
-  category: "FULL_STICK",
-  defaultValue: "P92",
-});
+// Curve — tier-scoped: Senior/Int get the full set, Junior/Youth get P92/P28.
+const FULL_CURVES = ["P92", "P28", "P88", "P92M", "PM9", "P02", "P90TM", "P91A"];
+pushOpt("CURVE", FULL_CURVES, { sizing: "SENIOR", category: "FULL_STICK", defaultValue: "P92" });
+pushOpt("CURVE", FULL_CURVES, { sizing: "INT", category: "FULL_STICK", defaultValue: "P92" });
+pushOpt("CURVE", ["P92", "P28"], { sizing: "JR", category: "FULL_STICK", defaultValue: "P92" });
+pushOpt("CURVE", ["P92", "P28"], { sizing: "YTH", category: "FULL_STICK", defaultValue: "P92" });
 // Goalie curve — all goalie sticks are P31
 pushOpt("CURVE", ["P31"], { category: "GOALIE", defaultValue: "P31" });
 
@@ -488,10 +491,11 @@ pushOpt("HAND", ["Right", "Left"], { defaultValue: "Right" });
     })
 );
 
-// Length — 3 per tier (Senior / Int / Jr). Placeholder inches; edit in /admin.
-pushOpt("LENGTH", ['60"', '57"', '54"'], { sizing: "SENIOR", defaultValue: '60"' });
-pushOpt("LENGTH", ['57"', '54"', '51"'], { sizing: "INT", defaultValue: '57"' });
-pushOpt("LENGTH", ['54"', '50"', '46"'], { sizing: "JR", defaultValue: '54"' });
+// Length — per tier, from the official size table (inches).
+pushOpt("LENGTH", ['66"', '68"', '70"'], { sizing: "SENIOR", defaultValue: '68"' });
+pushOpt("LENGTH", ['63"', '61"', '59"'], { sizing: "INT", defaultValue: '61"' });
+pushOpt("LENGTH", ['57"', '55"', '53"'], { sizing: "JR", defaultValue: '55"' });
+pushOpt("LENGTH", ['51"', '49"', '47"'], { sizing: "YTH", defaultValue: '49"' });
 
 // Paddle size — goalie only, 21"-28" in 1" increments
 pushOpt("PADDLE", ['21"', '22"', '23"', '24"', '25"', '26"', '27"', '28"'], {

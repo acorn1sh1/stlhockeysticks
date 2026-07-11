@@ -83,7 +83,7 @@ const CURVES_YOUTH = ["P92", "P28"];
 const HANDS = ["Right", "Left"];
 const PADDLE_SIZES = ['21"', '22"', '23"', '24"', '25"', '26"', '27"', '28"'];
 
-const FLEX_SENIOR = [65, 70, 75, 80, 85, 90, 95, 102];
+const FLEX_SENIOR = [65, 75, 85, 95, 102, 110, 112];
 const FLEX_INT = [45, 50, 55, 60, 65];
 const FLEX_JR = [35, 40, 45, 50, 55];
 const FLEX_YTH = [20, 25, 30, 35];
