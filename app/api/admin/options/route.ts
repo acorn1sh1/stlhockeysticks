@@ -48,6 +48,33 @@ export async function POST(req: Request) {
         data.upchargeCents = Math.max(0, Math.floor(Number(b.upchargeCents)));
       if (b.sortOrder != null) data.sortOrder = Math.floor(Number(b.sortOrder));
 
+      // Rename the value itself (the canonical name shown on the chip). Past
+      // orders snapshot their option as JSON, so renaming is safe historically.
+      // Guard the (kind, value, sizing, category) uniqueness within scope.
+      if (typeof b.value === "string" && b.value.trim()) {
+        const nv = b.value.trim().slice(0, 40);
+        const row = await prisma.optionValue.findUnique({ where: { id: b.id } });
+        if (row && nv !== row.value) {
+          const clash = await prisma.optionValue.findFirst({
+            where: {
+              kind: row.kind,
+              value: nv,
+              sizing: row.sizing,
+              category: row.category,
+              id: { not: row.id },
+            },
+            select: { id: true },
+          });
+          if (clash) {
+            return NextResponse.json(
+              { error: `"${nv}" already exists in this tier/category.` },
+              { status: 409 }
+            );
+          }
+          data.value = nv;
+        }
+      }
+
       // Enforce a single default per (kind, sizing, category) scope.
       if (data.isDefault === true) {
         const row = await prisma.optionValue.findUnique({ where: { id: b.id } });

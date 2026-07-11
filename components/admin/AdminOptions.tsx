@@ -50,6 +50,7 @@ export default function AdminOptions({
   const realCats = categories.filter((c) => c !== "ALL");
   const [cat, setCat] = useState<string>(realCats[0] ?? "ALL");
   const [adding, setAdding] = useState(false);
+  const [prefill, setPrefill] = useState<{ kind: string; tier: string; category: string } | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
 
   // Does a value apply under the selected category filter?
@@ -63,6 +64,7 @@ export default function AdminOptions({
         <h2 className="text-xl font-black">Pre-Order Options</h2>
         <button
           onClick={() => {
+            setPrefill(null);
             setAdding((v) => !v);
             setSelId(null);
           }}
@@ -98,12 +100,15 @@ export default function AdminOptions({
 
       {adding && (
         <AddOption
+          key={prefill ? `${prefill.kind}-${prefill.tier}-${prefill.category}` : "manual"}
           kinds={kinds}
           tiers={tiers}
           categories={categories}
           defaultCategory={cat}
+          prefill={prefill}
           onDone={() => {
             setAdding(false);
+            setPrefill(null);
             refresh();
           }}
         />
@@ -164,6 +169,17 @@ export default function AdminOptions({
                             }}
                           />
                         ))}
+                        <button
+                          onClick={() => {
+                            setSelId(null);
+                            setPrefill({ kind: col.kind, tier, category: cat });
+                            setAdding(true);
+                          }}
+                          title={`Add a ${col.kind} value to ${tier}`}
+                          className="inline-flex items-center rounded-full border border-dashed border-black/25 px-2.5 py-1 text-xs font-bold text-black/40 hover:border-ink hover:text-ink"
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -220,14 +236,19 @@ function ChipEditor({
   onSaved: () => void;
 }) {
   const [dollars, setDollars] = useState((row.upchargeCents / 100).toFixed(2));
+  const [name, setName] = useState(row.value);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
   const dirty = Math.round(Number(dollars) * 100) !== row.upchargeCents;
+  const nameDirty = name.trim() !== row.value && name.trim().length > 0;
 
   async function save(patch: Record<string, unknown>) {
     setBusy(true);
+    setErr("");
     const res = await post({ id: row.id, ...patch });
     setBusy(false);
     if (res.ok) onSaved();
+    else setErr((await res.json().catch(() => ({})))?.error ?? "Save failed");
   }
 
   async function remove() {
@@ -245,9 +266,22 @@ function ChipEditor({
   return (
     <div className="mt-4 flex flex-wrap items-end gap-4 rounded-2xl border-2 border-ink/20 bg-white p-4">
       <div>
-        <div className="text-xs font-bold uppercase text-black/40">{row.kind}</div>
-        <div className="text-lg font-black">{row.label ?? row.value}</div>
-        <div className="text-xs text-black/40">
+        <div className="text-xs font-bold uppercase text-black/40">{row.kind} name</div>
+        <div className="flex items-center gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-32 rounded-lg border border-black/20 px-2 py-1 text-lg font-black"
+          />
+          <button
+            onClick={() => save({ value: name.trim() })}
+            disabled={!nameDirty || busy}
+            className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-paper hover:bg-ink/80 disabled:opacity-40"
+          >
+            {busy ? "…" : "Rename"}
+          </button>
+        </div>
+        <div className="mt-1 text-xs text-black/40">
           {row.sizing === "ALL" ? "All tiers" : row.sizing} · {catLabel(row.category)}
         </div>
       </div>
@@ -297,6 +331,7 @@ function ChipEditor({
       >
         Delete
       </button>
+      {err && <span className="text-xs text-red-600">{err}</span>}
       <button
         onClick={onClose}
         className="ml-auto rounded-full px-3 py-2 text-xs font-bold text-black/40 hover:text-black"
@@ -312,21 +347,24 @@ function AddOption({
   tiers,
   categories,
   defaultCategory,
+  prefill,
   onDone,
 }: {
   kinds: string[];
   tiers: string[]; // real sizing tiers (no ALL)
   categories: string[]; // "ALL" + cats
   defaultCategory: string;
+  prefill?: { kind: string; tier: string; category: string } | null;
   onDone: () => void;
 }) {
-  const [kind, setKind] = useState(kinds[0] ?? "");
+  const [kind, setKind] = useState(prefill?.kind ?? kinds[0] ?? "");
   const [value, setValue] = useState("");
   const [label, setLabel] = useState("");
   const [upcharge, setUpcharge] = useState("0");
-  const [category, setCategory] = useState(defaultCategory);
-  const [allTiers, setAllTiers] = useState(true);
-  const [picked, setPicked] = useState<string[]>([]);
+  const [category, setCategory] = useState(prefill?.category ?? defaultCategory);
+  // Prefill from a column "+" targets that one tier; the top button starts on All.
+  const [allTiers, setAllTiers] = useState(prefill ? false : true);
+  const [picked, setPicked] = useState<string[]>(prefill ? [prefill.tier] : []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
