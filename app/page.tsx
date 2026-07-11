@@ -3,6 +3,7 @@ import BatchBanner from "@/components/BatchBanner";
 import ProductCard from "@/components/ProductCard";
 import MiniCard from "@/components/MiniCard";
 import StickPhoto from "@/components/StickPhoto";
+import Testimonials from "@/components/Testimonials";
 import { fmtPrice } from "@/lib/catalog";
 import { getStockMap } from "@/lib/inventory";
 import { getMergedCatalog } from "@/lib/products";
@@ -41,16 +42,17 @@ export default async function Home() {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 md:grid-cols-2 md:py-28">
           <div>
             <h1 className="text-5xl font-black leading-[1.05] tracking-tight md:text-6xl">
-              PRO STICKS.
+              PRO HOCKEY STICKS.
               <br />
               <span className="text-volt">STL PRICES.</span>
               <br />
               ZERO SHIPPING.
             </h1>
             <p className="mt-6 max-w-md text-lg text-paper/70">
-              Composite twigs for every player on the roster — senior to youth,
-              plus goalie — bought by the pallet and picked up right here in St.
-              Louis. No distributor markup, no oversized-box shipping tax.
+              Composite hockey sticks for every player on the roster — senior,
+              intermediate, junior, youth, and goalie — bought by the pallet at
+              wholesale prices and picked up right here in St. Louis. No
+              distributor markup, no oversized-box shipping tax.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
@@ -285,6 +287,26 @@ export default async function Home() {
               <p className="mt-1 text-sm text-black/60">{d}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* TESTIMONIALS — renders only when real reviews are added */}
+      <Testimonials />
+
+      {/* SEO / LOCAL COPY */}
+      <section className="border-t border-black/10 bg-white/60">
+        <div className="mx-auto max-w-3xl px-4 py-16">
+          <h2 className="text-2xl font-black tracking-tight">
+            St. Louis&apos; source for wholesale hockey sticks
+          </h2>
+          <p className="mt-3 text-black/60">
+            STL Hockey Sticks brings pro-quality composite and goalie sticks to
+            St. Louis at wholesale prices. We batch-order direct from the factory
+            each month, so you skip the retail markup and the shipping fees — just
+            build your stick online and pick it up locally. Senior, intermediate,
+            junior, youth, and custom club mini sticks available, in every flex,
+            curve, and colorway.
+          </p>
         </div>
       </section>
     </>

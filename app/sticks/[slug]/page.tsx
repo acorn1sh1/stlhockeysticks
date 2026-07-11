@@ -4,8 +4,11 @@ import { notFound } from "next/navigation";
 import BatchBanner from "@/components/BatchBanner";
 import Configurator from "@/components/Configurator";
 import StickPhoto from "@/components/StickPhoto";
+import JsonLd from "@/components/JsonLd";
 import { CATALOG } from "@/lib/catalog";
 import { getMergedItem } from "@/lib/products";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://stlhockeysticks.com";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +35,28 @@ export default async function StickDetail({
   const item = await getMergedItem(slug);
   if (!item?.options) notFound();
 
+  const productLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: item.name,
+    description: item.description,
+    category: item.category,
+    brand: { "@type": "Brand", name: "STL Hockey Sticks" },
+    offers: {
+      "@type": "Offer",
+      price: (item.priceCents / 100).toFixed(2),
+      priceCurrency: "USD",
+      availability: item.inStock
+        ? "https://schema.org/InStock"
+        : "https://schema.org/PreOrder",
+      url: `${SITE_URL}/sticks/${slug}`,
+      seller: { "@type": "Organization", name: "STL Hockey Sticks" },
+    },
+  };
+
   return (
     <>
+      <JsonLd data={productLd} />
       <BatchBanner />
       <div className="mx-auto max-w-6xl px-4 py-10">
         <Link href="/sticks" className="text-sm font-bold text-black/50 hover:text-ink">
