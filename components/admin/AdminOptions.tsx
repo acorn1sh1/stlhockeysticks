@@ -230,6 +230,18 @@ function ChipEditor({
     if (res.ok) onSaved();
   }
 
+  async function remove() {
+    const scopeWarn =
+      row.sizing === "ALL"
+        ? "This value is shared across ALL sizes — deleting removes it everywhere. Continue?"
+        : `Delete "${row.label ?? row.value}" from ${row.sizing}?`;
+    if (!window.confirm(scopeWarn)) return;
+    setBusy(true);
+    const res = await post({ id: row.id, delete: true });
+    setBusy(false);
+    if (res.ok) onSaved();
+  }
+
   return (
     <div className="mt-4 flex flex-wrap items-end gap-4 rounded-2xl border-2 border-ink/20 bg-white p-4">
       <div>
@@ -270,11 +282,20 @@ function ChipEditor({
       </button>
       <button
         onClick={() => save({ active: !row.active })}
+        title={row.active ? "Hide (keeps it, just off the storefront)" : "Show again"}
         className={`rounded-full px-3 py-2 text-xs font-bold ${
           row.active ? "bg-volt/30 text-ink" : "bg-black/10 text-black/50 hover:bg-black/20"
         }`}
       >
         {row.active ? "Active" : "Hidden"}
+      </button>
+      <button
+        onClick={remove}
+        disabled={busy}
+        title="Permanently remove this value"
+        className="rounded-full bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-40"
+      >
+        Delete
       </button>
       <button
         onClick={onClose}

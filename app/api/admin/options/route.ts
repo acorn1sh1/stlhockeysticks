@@ -29,6 +29,16 @@ export async function POST(req: Request) {
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
   try {
+    // Hard-delete a value. Historical orders store the chosen option as JSON
+    // (not an FK), so removing the catalog row is safe for past orders — it
+    // just stops offering the value going forward. Also drops any per-product
+    // pins referencing it (ProductOption cascade).
+    if (typeof b.id === "string" && b.id && b.delete === true) {
+      await prisma.optionValue.delete({ where: { id: b.id } });
+      invalidateOptionCache();
+      return NextResponse.json({ ok: true });
+    }
+
     if (typeof b.id === "string" && b.id) {
       const data: Record<string, unknown> = {};
       if (typeof b.active === "boolean") data.active = b.active;

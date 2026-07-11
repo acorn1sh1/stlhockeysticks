@@ -203,6 +203,7 @@ export default async function AdminPage() {
           status: o.status,
           subtotalCents: o.subtotalCents,
           createdAt: o.createdAt.toISOString(),
+          batchId: o.batchId ?? null,
           batchName: o.batch?.name ?? null,
         }))}
         categories={categoryRows.map((c) => c.key)}

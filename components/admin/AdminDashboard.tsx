@@ -34,6 +34,7 @@ type OrderRow = {
   status: string;
   subtotalCents: number;
   createdAt: string;
+  batchId: string | null;
   batchName: string | null;
 };
 
@@ -192,7 +193,9 @@ export default function AdminDashboard({
                     {o.status.replaceAll("_", " ")}
                   </span>
                 </td>
-                <td className="p-3 text-black/60">{o.batchName ?? "From stock"}</td>
+                <td className="p-3">
+                  <OrderBatchSelect order={o} batches={batches} onSaved={() => router.refresh()} />
+                </td>
                 <td className="p-3 text-right font-bold">{fmtPrice(o.subtotalCents)}</td>
               </tr>
             ))}
@@ -200,6 +203,47 @@ export default function AdminDashboard({
         </table>
       </div>
     </div>
+  );
+}
+
+// Per-order batch reassignment. Auto-assignment at checkout handles the common
+// case; this lets admin move a straggler to another batch or pull a "From
+// stock" order into one. "" = no batch (fulfilled from on-hand stock).
+function OrderBatchSelect({
+  order,
+  batches,
+  onSaved,
+}: {
+  order: OrderRow;
+  batches: BatchRow[];
+  onSaved: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function change(batchId: string) {
+    setBusy(true);
+    const res = await post("/api/admin/order", {
+      orderId: order.id,
+      batchId: batchId || null,
+    });
+    setBusy(false);
+    if (res.ok) onSaved();
+  }
+
+  return (
+    <select
+      value={order.batchId ?? ""}
+      disabled={busy}
+      onChange={(e) => change(e.target.value)}
+      className="rounded-lg border border-black/20 bg-white px-2 py-1 text-xs text-black/70 disabled:opacity-50"
+    >
+      <option value="">From stock</option>
+      {batches.map((b) => (
+        <option key={b.id} value={b.id}>
+          {b.name}
+        </option>
+      ))}
+    </select>
   );
 }
 
