@@ -46,6 +46,34 @@ async function post(body: unknown) {
   });
 }
 
+type SortKey = "name" | "category" | "price" | "cost" | "active";
+
+// Clickable column header — click to sort, click again to flip direction.
+function SortTh({
+  label,
+  k,
+  sort,
+  onSort,
+}: {
+  label: string;
+  k: SortKey;
+  sort: { key: SortKey; dir: 1 | -1 };
+  onSort: (k: SortKey) => void;
+}) {
+  const active = sort.key === k;
+  return (
+    <th className="p-3">
+      <button
+        onClick={() => onSort(k)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-ink ${active ? "text-ink" : ""}`}
+      >
+        {label}
+        <span className="text-[9px]">{active ? (sort.dir === 1 ? "▲" : "▼") : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
 export default function AdminProducts({
   products,
   categories,
@@ -63,6 +91,28 @@ export default function AdminProducts({
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState(false);
+
+  // Client-side sort. Default matches the server order (active first, name A–Z).
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "active", dir: 1 });
+  const toggle = (key: SortKey) =>
+    setSort((s) => (s.key === key ? { key, dir: (s.dir === 1 ? -1 : 1) as 1 | -1 } : { key, dir: 1 }));
+
+  const sorted = [...products].sort((a, b) => {
+    const d = sort.dir;
+    switch (sort.key) {
+      case "category":
+        return d * (a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+      case "price":
+        return d * (a.priceCents - b.priceCents);
+      case "cost":
+        return d * (a.costCents - b.costCents);
+      case "active":
+        // active first when ascending, then name A–Z
+        return d * (Number(b.active) - Number(a.active)) || a.name.localeCompare(b.name);
+      default:
+        return d * a.name.localeCompare(b.name);
+    }
+  });
 
   return (
     <section>
@@ -94,16 +144,16 @@ export default function AdminProducts({
         <table className="w-full text-sm">
           <thead className="border-b border-black/10 text-left text-xs uppercase text-black/40">
             <tr>
-              <th className="p-3">Product</th>
-              <th className="p-3">Category</th>
-              <th className="p-3">Price</th>
-              <th className="p-3">Cost</th>
-              <th className="p-3">Active</th>
+              <SortTh label="Product" k="name" sort={sort} onSort={toggle} />
+              <SortTh label="Category" k="category" sort={sort} onSort={toggle} />
+              <SortTh label="Price" k="price" sort={sort} onSort={toggle} />
+              <SortTh label="Cost" k="cost" sort={sort} onSort={toggle} />
+              <SortTh label="Active" k="active" sort={sort} onSort={toggle} />
               <th className="p-3"></th>
             </tr>
           </thead>
           <tbody>
-            {products.map((p) => (
+            {sorted.map((p) => (
               <ProductRowEditor
                 key={p.id}
                 row={p}
