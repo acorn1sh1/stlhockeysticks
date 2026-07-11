@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "@/lib/cart";
 import { useState } from "react";
-import { LogoLink } from "@/components/Logo";
 
 const nav = [
   { href: "/sticks", label: "Full Sticks" },
@@ -20,7 +20,9 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-black/10 bg-paper/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <LogoLink variant="light" size={22} />
+        <Link href="/" aria-label="STL Hockey Sticks — home">
+          <Image src="/logo.png" alt="STL Hockey Sticks" width={129} height={80} priority />
+        </Link>
 
         <nav className="hidden items-center gap-6 text-sm font-semibold md:flex">
           {nav.map((n) => (
