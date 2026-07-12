@@ -267,6 +267,31 @@ function StockEditor({ row, onSaved }: { row: StockRow; onSaved: () => void }) {
     if (res.ok) onSaved();
   }
 
+  async function remove() {
+    if (!confirm(`Delete “${row.name}”? This can't be undone.`)) return;
+    setBusy(true);
+    const res = await post("/api/admin/product", { slug: row.slug, delete: true });
+    if (res.ok) {
+      setBusy(false);
+      onSaved();
+      return;
+    }
+    if (res.status === 409) {
+      const msg = (await res.json().catch(() => ({})))?.error ?? "This SKU has order history.";
+      if (confirm(`${msg}\n\nHide it from the storefront instead?`)) {
+        const hideRes = await post("/api/admin/product", { slug: row.slug, active: false });
+        setBusy(false);
+        if (hideRes.ok) onSaved();
+        else alert("Hide failed.");
+        return;
+      }
+      setBusy(false);
+      return;
+    }
+    setBusy(false);
+    alert((await res.json().catch(() => ({})))?.error ?? "Delete failed");
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 p-4">
       <div>
@@ -301,6 +326,13 @@ function StockEditor({ row, onSaved }: { row: StockRow; onSaved: () => void }) {
           className="rounded-full bg-ink px-4 py-1.5 text-sm font-bold text-paper hover:bg-ink/80 disabled:opacity-40"
         >
           {busy ? "..." : "Save"}
+        </button>
+        <button
+          onClick={remove}
+          disabled={busy}
+          className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
+        >
+          {busy ? "..." : "Delete"}
         </button>
       </div>
     </div>

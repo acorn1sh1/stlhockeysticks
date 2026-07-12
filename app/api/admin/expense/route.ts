@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin";
 import { EXPENSE_CATEGORIES } from "@/lib/accounting";
+import { pushExpense } from "@/lib/cornishCore";
 
 // General-ledger expenses (everything that isn't a supplier batch cost):
 // packaging, Clover fees, marketing, tools, gas... Optionally linked to a
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    await prisma.expense.create({
+    const created = await prisma.expense.create({
       data: {
         date: (data.date as Date) ?? new Date(),
         category: data.category as string,
@@ -75,6 +76,14 @@ export async function POST(req: Request) {
         amountCents: data.amountCents as number,
         batchId: (data.batchId as string | null) ?? null,
       },
+    });
+    // Mirror the expense up to cornish-core's ledger. Best-effort.
+    await pushExpense({
+      siteExpenseId: created.id,
+      date: created.date,
+      category: created.category,
+      description: created.description,
+      amountCents: created.amountCents,
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { decrementForOrder } from "@/lib/inventory";
 import { verifyCloverSignature } from "@/lib/cloverWebhook";
+import { pushPaidOrder } from "@/lib/cornishCore";
 
 // Clover webhook receiver.
 // Configure in Clover dashboard -> webhooks, point at
@@ -72,6 +73,9 @@ export async function POST(req: Request) {
         } catch (e) {
           console.error("stock decrement error", pending.id, e);
         }
+        // Mirror the paid order up to cornish-core (the shared books).
+        // Best-effort: pushPaidOrder swallows its own errors.
+        await pushPaidOrder(pending.id);
         // Count the coupon redemption now that payment is confirmed.
         if (pending.couponId) {
           try {
