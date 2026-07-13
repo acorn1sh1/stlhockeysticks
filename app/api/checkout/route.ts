@@ -5,8 +5,6 @@ import { getOrCreateOpenBatch } from "@/lib/batch";
 import { validateCoupon } from "@/lib/coupons";
 import {
   batchDiscountCents,
-  batchDiscountPercent,
-  batchDiscountQty,
   CATALOG,
   clubDiscountCents,
   optionsSummary,
@@ -112,9 +110,9 @@ export async function POST(req: Request) {
   // First-batch launch discount — re-computed server-side (tier + deadline)
   // so a tampered client can't fake a tier or beat the Aug 1 cutoff.
   const batchCents = batchDiscountCents(discountLineInput);
-  const batchPct = batchDiscountPercent(batchDiscountQty(discountLineInput));
   // Both are order-level bulk discounts netted into subtotalCents (see
-  // Order.discountCents). Kept as separate Clover lines for a clear receipt.
+  // Order.discountCents). Folded proportionally into the Clover line
+  // prices below rather than sent as their own line — see cloverLines.
   const discountCents = clubCents + batchCents;
 
   // Coupon applies on top of any bulk discount. Re-validated here so a
@@ -165,6 +163,46 @@ export async function POST(req: Request) {
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const [firstName, ...rest] = body.name.split(" ");
 
+  // Clover's Hosted Checkout API has no discount field and rejects negative
+  // shoppingCart.lineItems[].price ("Line item prices should be positive"),
+  // so the old approach of sending club/batch/coupon discounts as their own
+  // negative-price line never actually worked. Instead, distribute the
+  // total discount proportionally across the real product lines and fold
+  // it into each line's price. Largest-remainder rounding guarantees the
+  // lineItems sum lands on exactly `subtotalCents` (what's recorded on the
+  // Order and what cornish-core's ledger expects), never off by a cent.
+  const totalDiscountCents = discountCents + couponDiscountCents;
+  const cloverLines =
+    totalDiscountCents <= 0
+      ? lines.map((l) => ({
+          name: l.label,
+          priceCents: l.unitCents,
+          quantity: l.quantity,
+        }))
+      : (() => {
+          const lineGross = lines.map((l) => l.unitCents * l.quantity);
+          const raw = lineGross.map((g) => (g * totalDiscountCents) / grossCents);
+          const floors = raw.map(Math.floor);
+          const remainder = Math.round(
+            totalDiscountCents - floors.reduce((a, b) => a + b, 0)
+          );
+          // Hand the leftover cents to the lines with the largest
+          // fractional remainder first so the discount total lands exactly.
+          const byFrac = raw
+            .map((r, i) => ({ i, frac: r - Math.floor(r) }))
+            .sort((a, b) => b.frac - a.frac);
+          const shares = [...floors];
+          for (let k = 0; k < remainder; k++) shares[byFrac[k % byFrac.length].i] += 1;
+          // unitQty forced to 1 (quantity baked into the price) so each
+          // line's discounted total is an exact integer with no per-unit
+          // division rounding.
+          return lines.map((l, i) => ({
+            name: l.quantity > 1 ? `${l.label} × ${l.quantity}` : l.label,
+            priceCents: Math.max(0, lineGross[i] - shares[i]),
+            quantity: 1,
+          }));
+        })();
+
   try {
     const checkout = await createHostedCheckout({
       customer: {
@@ -173,22 +211,7 @@ export async function POST(req: Request) {
         lastName: rest.join(" ") || undefined,
         phone: body.phone,
       },
-      lines: [
-        ...lines.map((l) => ({
-          name: l.label,
-          priceCents: l.unitCents,
-          quantity: l.quantity,
-        })),
-        ...(clubCents > 0
-          ? [{ name: "10% Team Donation Discount", priceCents: -clubCents, quantity: 1 }]
-          : []),
-        ...(batchCents > 0
-          ? [{ name: `First-Batch Bulk Discount (${batchPct}% off)`, priceCents: -batchCents, quantity: 1 }]
-          : []),
-        ...(couponDiscountCents > 0
-          ? [{ name: `Promo ${couponCode}`, priceCents: -couponDiscountCents, quantity: 1 }]
-          : []),
-      ],
+      lines: cloverLines,
       redirectUrls: {
         success: `${site}/checkout/success?order=${order.id}`,
         failure: `${site}/checkout/failed?order=${order.id}`,

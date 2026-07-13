@@ -104,9 +104,17 @@ describe("POST /api/checkout", () => {
     const expectedDiscount = Math.round(2799 * 25 * 0.1);
     expect(orderArg.discountCents).toBe(expectedDiscount);
     expect(orderArg.subtotalCents).toBe(2799 * 25 - expectedDiscount);
-    // A negative discount line is passed to the processor.
+    // Clover rejects negative shoppingCart.lineItems[].price ("Line item
+    // prices should be positive"), so the discount must be folded into
+    // positive-priced lines instead of sent as its own negative line — and
+    // the lines must still sum to exactly the discounted subtotal.
     const cloverArg = createHostedCheckoutMock.mock.calls[0][0];
-    expect(cloverArg.lines.some((l: { priceCents: number }) => l.priceCents === -expectedDiscount)).toBe(true);
+    expect(cloverArg.lines.every((l: { priceCents: number }) => l.priceCents > 0)).toBe(true);
+    const cloverTotal = cloverArg.lines.reduce(
+      (n: number, l: { priceCents: number; quantity: number }) => n + l.priceCents * l.quantity,
+      0
+    );
+    expect(cloverTotal).toBe(2799 * 25 - expectedDiscount);
   });
 
   it("rejects an invalid coupon at checkout (server re-validates)", async () => {
