@@ -233,39 +233,43 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* MINI STICKS PITCH */}
-      <section className="bg-ink py-16 text-paper">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="mb-8 max-w-2xl">
-            <h2 className="text-3xl font-black tracking-tight">
-              Mini Sticks. <span className="text-volt">Major Bragging Rights.</span>
-            </h2>
-            <p className="mt-3 text-paper/70">
-              Custom mini sticks in your club&apos;s colors — or wild Fun Series
-              graphics for the basement-hockey diehards. $27.99, every
-              design, the best money you&apos;ll spend on team spirit and
-              carpet slap shots.
-            </p>
+      {/* MINI STICKS PITCH — hidden until there's a real catalog to show
+          (no minis at launch; owner adds them via /admin). Reappears
+          automatically once minis.length > 0, no code change needed. */}
+      {minis.length > 0 && (
+        <section className="bg-ink py-16 text-paper">
+          <div className="mx-auto max-w-6xl px-4">
+            <div className="mb-8 max-w-2xl">
+              <h2 className="text-3xl font-black tracking-tight">
+                Mini Sticks. <span className="text-volt">Major Bragging Rights.</span>
+              </h2>
+              <p className="mt-3 text-paper/70">
+                Custom mini sticks in your club&apos;s colors — or wild Fun Series
+                graphics for the basement-hockey diehards. $27.99, every
+                design, the best money you&apos;ll spend on team spirit and
+                carpet slap shots.
+              </p>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {minis.slice(0, 3).map((item) => (
+                <MiniCard
+                  key={item.slug}
+                  item={item}
+                  stock={stockMap[item.slug]?.inStock}
+                />
+              ))}
+            </div>
+            <div className="mt-8 text-center">
+              <Link
+                href="/mini-sticks"
+                className="inline-block rounded-full bg-volt px-7 py-3 font-bold text-ink transition hover:bg-volt-dark"
+              >
+                Browse All Mini Sticks →
+              </Link>
+            </div>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {minis.slice(0, 3).map((item) => (
-              <MiniCard
-                key={item.slug}
-                item={item}
-                stock={stockMap[item.slug]?.inStock}
-              />
-            ))}
-          </div>
-          <div className="mt-8 text-center">
-            <Link
-              href="/mini-sticks"
-              className="inline-block rounded-full bg-volt px-7 py-3 font-bold text-ink transition hover:bg-volt-dark"
-            >
-              Browse All Mini Sticks →
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* HOW IT WORKS */}
       <section className="mx-auto max-w-6xl px-4 py-16">
@@ -304,8 +308,8 @@ export default async function Home() {
             St. Louis at wholesale prices. We batch-order direct from the factory
             each month, so you skip the retail markup and the shipping fees — just
             build your stick online and pick it up locally. Senior, intermediate,
-            junior, youth, and custom club mini sticks available, in every flex,
-            curve, and colorway.
+            junior, and youth sticks available, in every flex, curve, and
+            colorway.
           </p>
         </div>
       </section>
