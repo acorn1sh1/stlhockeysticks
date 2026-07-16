@@ -74,7 +74,11 @@ describe("POST /api/checkout", () => {
       jsonRequest({
         email: "a@b.com",
         name: "Andrew Cornish",
-        // Red (+$10) and a custom name (+$10) => 11900 + 2000 = 13900
+        // Color carries no upcharge (colorUpchargeCents: 0 — all colors are
+        // the same price). Custom name (+$10) => 11900 + 1000 = 12900/unit,
+        // gross 25800 for qty 2. That quantity also clears the First-Batch
+        // Launch discount's qty-2 tier (10% off FULL_STICK/GOALIE lines),
+        // so the final total is 25800 - 2580 = 23220.
         lines: [{ slug: "elite-senior-stick", quantity: 2, options: { flex: "85", curve: "P92", hand: "Right", color: "Red", customName: "AC" } }],
       })
     );
@@ -83,9 +87,12 @@ describe("POST /api/checkout", () => {
     expect(await res.json()).toEqual({ url: "https://pay.clover/abc", orderId: "order_1" });
 
     const orderArg = prismaMock.order.create.mock.calls[0][0].data;
-    expect(orderArg.subtotalCents).toBe(13900 * 2);
+    expect(orderArg.subtotalCents).toBe(23220);
+    // Discount is active, so the line gets folded into a single positive-
+    // priced Clover line (see cloverLines in the route) rather than kept as
+    // "2 × unit price" — its total must still land on the exact subtotal.
     const cloverArg = createHostedCheckoutMock.mock.calls[0][0];
-    expect(cloverArg.lines[0]).toMatchObject({ priceCents: 13900, quantity: 2 });
+    expect(cloverArg.lines[0]).toMatchObject({ priceCents: 23220, quantity: 1 });
   });
 
   it("applies the 10% club donation discount past 20 sticks", async () => {

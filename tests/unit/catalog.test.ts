@@ -34,8 +34,11 @@ describe("unitPriceCents", () => {
     expect(unitPriceCents(elite, { color: elite.options!.colors[0] })).toBe(11900);
   });
 
-  it("adds the color upcharge for a non-standard color", () => {
-    expect(unitPriceCents(elite, { color: "Red" })).toBe(11900 + 1000);
+  it("charges nothing for a non-standard color (no color upcharge)", () => {
+    // colorUpchargeCents is 0 — all colors are the same price, no phantom
+    // charge. See baseOpts in lib/catalog.ts and the COLOR seed in
+    // prisma/seed.mjs ("all colors included, no upcharge").
+    expect(unitPriceCents(elite, { color: "Red" })).toBe(11900);
   });
 
   it("adds the name upcharge when a custom name is set", () => {
@@ -46,8 +49,8 @@ describe("unitPriceCents", () => {
     expect(unitPriceCents(elite, { customName: "   " })).toBe(11900);
   });
 
-  it("stacks color + name upcharges", () => {
-    expect(unitPriceCents(elite, { color: "Green", customName: "AC" })).toBe(11900 + 2000);
+  it("charges only the name upcharge when color + name are both set", () => {
+    expect(unitPriceCents(elite, { color: "Green", customName: "AC" })).toBe(11900 + 1000);
   });
 
   it("ignores options for items that have none (minis)", () => {
