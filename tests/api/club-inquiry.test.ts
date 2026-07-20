@@ -25,6 +25,23 @@ describe("POST /api/club-inquiry", () => {
     expect(data.clubName).toBe("Affton Americans");
   });
 
+  it("stores the interest track, defaulting bogus values to MINIS", async () => {
+    // Distinct forwarded IPs so these don't eat into the shared rate-limit
+    // budget of the unkeyed requests above (max 5 per window per key).
+    const withIp = (body: unknown, ip: string) =>
+      new Request("http://localhost/api/test", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-forwarded-for": ip },
+        body: JSON.stringify(body),
+      });
+    prismaMock.clubInquiry.create.mockResolvedValue({ id: "inq_2" });
+    await POST(withIp({ ...valid, interest: "FULL_STICKS" }, "10.0.0.1"));
+    expect(prismaMock.clubInquiry.create.mock.calls[0][0].data.interest).toBe("FULL_STICKS");
+    prismaMock.clubInquiry.create.mockClear();
+    await POST(withIp({ ...valid, interest: "HACK" }, "10.0.0.2"));
+    expect(prismaMock.clubInquiry.create.mock.calls[0][0].data.interest).toBe("MINIS");
+  });
+
   it("500s on a DB failure", async () => {
     prismaMock.clubInquiry.create.mockRejectedValue(new Error("db down"));
     const res = await POST(jsonRequest(valid));

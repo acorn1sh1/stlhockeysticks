@@ -15,11 +15,16 @@ export async function POST(req: Request) {
   // clients that don't send it.
   const ORG_TYPES = new Set(["CLUB", "SCHOOL", "TEAM", "OTHER"]);
   const orgType = ORG_TYPES.has(String(body.orgType)) ? String(body.orgType) : "CLUB";
+  // What they're after: custom-logo minis, a bulk full-stick team order
+  // (standard builds, no logo), or both. Defaults to MINIS for old clients.
+  const INTERESTS = new Set(["MINIS", "FULL_STICKS", "BOTH"]);
+  const interest = INTERESTS.has(String(body.interest)) ? String(body.interest) : "MINIS";
 
   try {
     await prisma.clubInquiry.create({
       data: {
         orgType,
+        interest,
         clubName: String(body.clubName).slice(0, 200),
         contact: String(body.contact).slice(0, 200),
         email: String(body.email).slice(0, 200),

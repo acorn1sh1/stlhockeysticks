@@ -349,6 +349,7 @@ export default async function AdminPage() {
           inquiries={inquiryRows.map((q) => ({
             id: q.id,
             orgType: q.orgType,
+            interest: q.interest,
             clubName: q.clubName,
             contact: q.contact,
             email: q.email,

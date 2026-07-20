@@ -276,6 +276,7 @@ model OrderItem {
 model ClubInquiry {
   id        String   @id @default(cuid())
   orgType   String   @default("CLUB") // CLUB | SCHOOL | TEAM | OTHER — who's asking for a custom stick
+  interest  String   @default("MINIS") // MINIS (custom-logo minis) | FULL_STICKS (team bulk, standard builds, no logo) | BOTH
   clubName  String
   contact   String
   email     String

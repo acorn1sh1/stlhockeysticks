@@ -9,6 +9,7 @@ import { useState } from "react";
 export type InquiryRow = {
   id: string;
   orgType: string;
+  interest: string; // MINIS | FULL_STICKS | BOTH
   clubName: string;
   contact: string;
   email: string;
@@ -30,6 +31,12 @@ const ORG_LABEL: Record<string, string> = {
   SCHOOL: "School",
   TEAM: "Team",
   OTHER: "Other",
+};
+
+const INTEREST_LABEL: Record<string, string> = {
+  MINIS: "Custom minis",
+  FULL_STICKS: "Bulk full sticks",
+  BOTH: "Minis + full sticks",
 };
 
 const fmtDate = (iso: string) =>
@@ -100,6 +107,9 @@ export default function AdminInquiries({
                     <span className="rounded-full bg-volt/30 px-2 py-0.5 text-xs font-bold text-ink">
                       {ORG_LABEL[q.orgType] ?? q.orgType}
                     </span>
+                    <div className="mt-1 text-[10px] font-bold uppercase text-black/40">
+                      {INTEREST_LABEL[q.interest] ?? q.interest}
+                    </div>
                   </td>
                   <td className="p-3 font-semibold">{q.clubName}</td>
                   <td className="p-3">

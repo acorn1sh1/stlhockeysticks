@@ -36,6 +36,14 @@ export default function ClubInquiryForm() {
         </select>
       </div>
       <div>
+        <label className="mb-1 block font-bold" htmlFor="interest">What are you after?</label>
+        <select id="interest" name="interest" required defaultValue="MINIS" className="w-full rounded-lg border border-black/20 bg-white px-3 py-2">
+          <option value="MINIS">Custom mini sticks (your colors &amp; logo)</option>
+          <option value="FULL_STICKS">Bulk full-size sticks for the team (standard builds)</option>
+          <option value="BOTH">Both</option>
+        </select>
+      </div>
+      <div>
         <label className="mb-1 block font-bold" htmlFor="clubName">Club / school / team name</label>
         <input id="clubName" name="clubName" required className="w-full rounded-lg border border-black/20 px-3 py-2" placeholder="Your organization's name" />
       </div>
@@ -56,7 +64,7 @@ export default function ClubInquiryForm() {
         disabled={state === "sending"}
         className="w-full rounded-full bg-ink py-3 font-bold text-paper hover:bg-ink/80 disabled:opacity-50"
       >
-        {state === "sending" ? "Sending..." : "Request a Free Mockup"}
+        {state === "sending" ? "Sending..." : "Send Inquiry"}
       </button>
       {state === "error" && (
         <p className="text-red-600">Something broke — try again or email us.</p>
