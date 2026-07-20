@@ -52,6 +52,9 @@ export type CatalogItem = {
   // populated for ALL types (not just IN_STOCK). Used to tint the mini
   // stick card + detail art. Undefined when no color is set.
   accent?: string;
+  // Teaser: card renders with a "Coming Soon" badge and can't be opened
+  // or bought. Sourced from Product.comingSoon (admin-toggled).
+  comingSoon?: boolean;
 };
 
 // Minimal non-empty-looking shell so a DB product with `configurable: true`
@@ -310,12 +313,22 @@ export const CATALOG: CatalogItem[] = [
 
   // ---- MINI STICKS ----
   {
+    slug: "mini-stick",
+    name: "Mini Stick",
+    description:
+      "The basement-hockey classic, shrunk to knee height. Composite build in your pick of our standard colors. Pre-order now — arrives with the next monthly batch.",
+    category: "MINI_PLAIN",
+    priceCents: 2699,
+    badge: "Pre-Order Now",
+    specs: ["Composite one-piece", "Standard colors", "Local STL pickup"],
+  },
+  {
     slug: "club-custom-mini-stick",
     name: "Club Custom Mini Stick",
     description:
       "Your club's colors and logo on an 18\" knee-hockey legend. Rally your team, one basement celly at a time.",
     category: "MINI_CLUB",
-    priceCents: 2799,
+    priceCents: 3499,
     badge: "Club Favorite",
   },
   {
@@ -324,7 +337,7 @@ export const CATALOG: CatalogItem[] = [
     description:
       "Wild graphics, loud colors — the basement-hockey classic kids fight over before the tape's even on.",
     category: "MINI_FUN",
-    priceCents: 2799,
+    priceCents: 3199,
   },
 ];
 
@@ -424,26 +437,43 @@ export function nextBatch() {
   return { cutoff, manufactureDone, pickupStart, pickupEnd, daysLeft };
 }
 
-// Club bulk incentive: 10% donated back to the team once a club order
-// passes 20 sticks. Was tied to a single generic "club-custom-mini-stick"
-// SKU; now that each club has its own mini it's category-based — any mix of
-// MINI_CLUB minis counts toward the 20. The old slug is still honored as a
-// fallback so historical/mocked lines without a category keep working.
+// Club donation incentive: 10% donated back to the team, two independent
+// tracks that can both apply on one order:
+//   • 50+ club-design minis (MINI_CLUB — plain/Fun Series minis don't count)
+//     → 10% off the club-mini subtotal
+//   • 20+ full-size sticks (FULL_STICK + GOALIE, any mix)
+//     → 10% off the full-stick subtotal
+// Thresholds are inclusive ("50 or more"). The legacy generic club-mini slug
+// is still honored so historical/mocked lines without a category keep working.
 export const CLUB_STICK_SLUG = "club-custom-mini-stick";
 export const CLUB_CATEGORY = "MINI_CLUB";
-export const CLUB_DISCOUNT_THRESHOLD = 20;
+export const CLUB_MINI_DISCOUNT_THRESHOLD = 50;
+export const CLUB_FULL_DISCOUNT_THRESHOLD = 20;
+export const CLUB_FULL_CATEGORIES = ["FULL_STICK", "GOALIE"];
 export const CLUB_DISCOUNT_RATE = 0.1;
+// Back-compat alias (old tests/imports) — the mini threshold.
+export const CLUB_DISCOUNT_THRESHOLD = CLUB_MINI_DISCOUNT_THRESHOLD;
 
-export function clubDiscountCents(
-  lines: { slug: string; quantity: number; priceCents: number; category?: string }[]
-) {
-  const clubLines = lines.filter(
+type DiscountLine = { slug: string; quantity: number; priceCents: number; category?: string };
+
+const trackCents = (lines: DiscountLine[], threshold: number) => {
+  const qty = lines.reduce((n, l) => n + l.quantity, 0);
+  if (qty < threshold) return 0;
+  const subtotal = lines.reduce((n, l) => n + l.priceCents * l.quantity, 0);
+  return Math.round(subtotal * CLUB_DISCOUNT_RATE);
+};
+
+export function clubDiscountCents(lines: DiscountLine[]) {
+  const miniLines = lines.filter(
     (l) => l.category === CLUB_CATEGORY || l.slug === CLUB_STICK_SLUG
   );
-  const qty = clubLines.reduce((n, l) => n + l.quantity, 0);
-  if (qty <= CLUB_DISCOUNT_THRESHOLD) return 0;
-  const clubSubtotal = clubLines.reduce((n, l) => n + l.priceCents * l.quantity, 0);
-  return Math.round(clubSubtotal * CLUB_DISCOUNT_RATE);
+  const fullLines = lines.filter(
+    (l) => l.category != null && CLUB_FULL_CATEGORIES.includes(l.category)
+  );
+  return (
+    trackCents(miniLines, CLUB_MINI_DISCOUNT_THRESHOLD) +
+    trackCents(fullLines, CLUB_FULL_DISCOUNT_THRESHOLD)
+  );
 }
 
 // ---- First-Batch Launch bulk discount ----------------------------------

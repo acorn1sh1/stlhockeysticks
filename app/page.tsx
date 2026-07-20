@@ -244,9 +244,8 @@ export default async function Home() {
                 Mini Sticks. <span className="text-volt">Major Bragging Rights.</span>
               </h2>
               <p className="mt-3 text-paper/70">
-                Custom mini sticks in your club&apos;s colors — or wild Fun Series
-                graphics for the basement-hockey diehards. $27.99, every
-                design, the best money you&apos;ll spend on team spirit and
+                From $26.99 in our standard colors — custom club designs
+                $34.99. The best money you&apos;ll spend on team spirit and
                 carpet slap shots.
               </p>
             </div>

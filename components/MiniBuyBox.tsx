@@ -7,25 +7,32 @@ import { useCart } from "@/lib/cart";
 // Client add-to-cart box for the mini stick detail page. Mirrors the
 // availability rules used on the full-stick pages: an IN_STOCK mini with
 // live stock ships now (quantity picker); otherwise it's a pre-order into
-// the next monthly batch (single unit). Minis are non-configurable so
-// `add` takes no options.
+// the next monthly batch (single unit).
+//
+// `colors` (plain minis only): the standard-color list from the admin-
+// editable COLOR option rows. Non-empty = shopper must pick one; the pick
+// rides along as `options.color` so it lands on the order line at checkout.
+// Empty (club/fun minis, or DB hiccup) = no picker, no options.
 export default function MiniBuyBox({
   item,
   stock,
+  colors = [],
 }: {
   item: CatalogItem;
   stock?: number;
+  colors?: string[];
 }) {
   const { add } = useCart();
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
+  const [color, setColor] = useState(colors[0]);
 
   const stocked = !!item.inStock;
   const shipsNow = stocked && typeof stock === "number" && stock > 0;
   const lowStock = shipsNow && (stock as number) <= 5;
 
   const onAdd = () => {
-    add(item, undefined, shipsNow ? qty : 1);
+    add(item, colors.length ? { color } : undefined, shipsNow ? qty : 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1200);
   };
@@ -50,6 +57,30 @@ export default function MiniBuyBox({
       </p>
       {lowStock && (
         <p className="mt-2 text-sm font-bold text-ink">Only {stock} left.</p>
+      )}
+
+      {colors.length > 0 && (
+        <div className="mt-5">
+          <p className="text-xs font-bold uppercase tracking-wide text-black/40">
+            Color — {color}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {colors.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setColor(c)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                  color === c
+                    ? "border-ink bg-ink text-paper"
+                    : "border-black/20 bg-white text-black/60 hover:border-ink"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="mt-5 flex items-center gap-3">

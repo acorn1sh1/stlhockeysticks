@@ -75,6 +75,7 @@ export async function POST(req: Request) {
     data.type = b.preorder ? "PREORDER" : "IN_STOCK";
   }
   if (typeof b.active === "boolean") data.active = b.active;
+  if (typeof b.comingSoon === "boolean") data.comingSoon = b.comingSoon;
   // Locked build fields for IN_STOCK SKUs (display only, no configurator).
   if (b.fixedFlex != null) data.fixedFlex = b.fixedFlex === "" ? null : Math.floor(Number(b.fixedFlex));
   if (typeof b.fixedCurve === "string") data.fixedCurve = b.fixedCurve || null;
@@ -114,6 +115,7 @@ export async function POST(req: Request) {
           preorder: (data.preorder as boolean) ?? false,
           type: (data.type as "PREORDER" | "IN_STOCK") ?? "IN_STOCK",
           active: (data.active as boolean) ?? true,
+          comingSoon: (data.comingSoon as boolean) ?? false,
           fixedFlex: (data.fixedFlex as number | null) ?? null,
           fixedCurve: (data.fixedCurve as string | null) ?? null,
           fixedHand: (data.fixedHand as string | null) ?? null,

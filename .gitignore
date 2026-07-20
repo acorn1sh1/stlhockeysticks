@@ -9,3 +9,5 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 tsconfig.test.tsbuildinfo
 .claude/
+.vercel
+.env*

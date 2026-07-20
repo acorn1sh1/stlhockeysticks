@@ -34,6 +34,7 @@ export type ProductRow = {
   inStock: number;
   preorder: boolean;
   active: boolean;
+  comingSoon: boolean;
   fixedFlex: number | null;
   fixedCurve: string | null;
   fixedHand: string | null;
@@ -234,7 +235,14 @@ function ProductRowEditor({
     <>
       <tr className={`border-b border-black/5 ${expanded ? "" : "last:border-0"} ${row.active ? "" : "opacity-50"}`}>
         <td className="p-3">
-          <div className="font-semibold">{row.name}</div>
+          <div className="font-semibold">
+            {row.name}
+            {row.comingSoon && (
+              <span className="ml-2 rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold uppercase text-black/50">
+                Coming Soon
+              </span>
+            )}
+          </div>
           <div className="text-xs text-black/40">{row.slug}</div>
         </td>
         <td className="p-3 text-black/60">{row.category.replace("_", " ")}</td>
@@ -350,6 +358,7 @@ function ProductDetailEditor({
     specs: row.specs.join(", "),
     configurable: row.configurable,
     preorder: row.preorder,
+    comingSoon: row.comingSoon,
     inStock: String(row.inStock),
     fixedFlex: row.fixedFlex != null ? String(row.fixedFlex) : "",
     fixedCurve: row.fixedCurve ?? "",
@@ -375,6 +384,7 @@ function ProductDetailEditor({
       specs: f.specs.split(",").map((s) => s.trim()).filter(Boolean),
       configurable: f.configurable,
       preorder: f.preorder,
+      comingSoon: f.comingSoon,
       inStock: Number(f.inStock),
       fixedFlex: f.fixedFlex === "" ? "" : Math.floor(Number(f.fixedFlex)),
       fixedCurve: f.fixedCurve,
@@ -455,6 +465,10 @@ function ProductDetailEditor({
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={f.preorder} onChange={(e) => set("preorder", e.target.checked)} />
         Pre-order (built to order, no live stock)
+      </label>
+      <label className="flex items-center gap-2 text-sm" title="Card shows on the site with a Coming Soon badge but can't be opened or bought. Uncheck when it's ready to sell.">
+        <input type="checkbox" checked={f.comingSoon} onChange={(e) => set("comingSoon", e.target.checked)} />
+        Coming Soon (visible, not buyable)
       </label>
       {!f.preorder && (
         <label className="text-sm">

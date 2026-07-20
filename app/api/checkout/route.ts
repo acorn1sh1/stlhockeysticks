@@ -41,8 +41,9 @@ export async function POST(req: Request) {
   }
 
   const slugs = [...new Set(body.lines.map((l) => l.slug))];
+  // comingSoon products are visible teasers only — never purchasable.
   const products = await prisma.product.findMany({
-    where: { slug: { in: slugs }, active: true },
+    where: { slug: { in: slugs }, active: true, comingSoon: false },
   });
   if (products.length !== slugs.length) {
     return NextResponse.json({ error: "Unknown product in cart" }, { status: 400 });

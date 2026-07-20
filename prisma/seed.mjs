@@ -8,8 +8,9 @@ const prisma = new PrismaClient();
 const categories = [
   { key: "FULL_STICK", label: "Full Stick", sortOrder: 0 },
   { key: "GOALIE", label: "Goalie", sortOrder: 1 },
-  { key: "MINI_CLUB", label: "Mini Club", sortOrder: 2 },
-  { key: "MINI_FUN", label: "Mini Fun", sortOrder: 3 },
+  { key: "MINI_PLAIN", label: "Mini Plain", sortOrder: 2 },
+  { key: "MINI_CLUB", label: "Mini Club", sortOrder: 3 },
+  { key: "MINI_FUN", label: "Mini Fun", sortOrder: 4 },
 ];
 for (const c of categories) {
   await prisma.category.upsert({ where: { key: c.key }, update: c, create: c });
@@ -256,14 +257,24 @@ const products = [
   },
 
   // ---- MINI STICKS ----
-  // No mini sticks at launch — owner manages the real club/Fun Series
-  // catalog entirely from /admin post-launch. Previously this array seeded
-  // 9 placeholder clubs (Affton, Kirkwood, Rockets, St. Peters, Meramec,
-  // Chesterfield + 3 Fun Series) that were never real inventory; removing
-  // them here lets the "retire any old slugs no longer sold" cleanup below
-  // auto-deactivate those rows in the DB on the next `db:seed` run. Add real
-  // products back here (or via /admin — no code change needed either way)
-  // when there's an actual catalog to sell.
+  // Launch lineup: one plain mini on pre-order in the standard colors
+  // (shopper picks the color on the detail page — colors come from the
+  // admin-editable COLOR rows in Pre-Order Options). Club-customized minis
+  // are managed from /admin: create the product in MINI_CLUB and tick
+  // "Coming Soon" until the design is ready to sell.
+  {
+    slug: "mini-stick",
+    name: "Mini Stick",
+    description:
+      "The basement-hockey classic, shrunk to knee height. Composite build in your pick of our standard colors. Pre-order now — arrives with the next monthly batch.",
+    category: "MINI_PLAIN",
+    sizingTier: null,
+    configurable: false,
+    badge: "Pre-Order Now",
+    specs: ["Composite one-piece", "Standard colors", "Local STL pickup"],
+    priceCents: 2699,
+    preorder: true,
+  },
 ];
 
 // Locked builds for the IN_STOCK catalog (display only, no customization).
@@ -389,9 +400,18 @@ await prisma.optionValue.updateMany({
   data: { active: false },
 });
 
-// Retire any old slugs no longer sold
+// Retire known legacy placeholder slugs no longer sold. Deliberately an
+// explicit list (NOT "everything missing from this seed") so products the
+// owner creates from /admin — club minis, new SKUs — survive a re-seed.
+const RETIRED_SLUGS = [
+  "instock-goalie-26-paddle",
+  // 2026-07 placeholder minis that were never real inventory:
+  "affton-mini", "kirkwood-mini", "rockets-mini", "st-peters-mini",
+  "meramec-mini", "chesterfield-mini",
+  "fun-series-neon", "fun-series-camo", "fun-series-galaxy",
+];
 await prisma.product.updateMany({
-  where: { slug: { notIn: products.map((p) => p.slug) } },
+  where: { slug: { in: RETIRED_SLUGS } },
   data: { active: false },
 });
 

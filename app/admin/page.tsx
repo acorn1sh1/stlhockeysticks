@@ -9,6 +9,7 @@ import AdminSizingTiers from "@/components/admin/AdminSizingTiers";
 import AdminAttributeKinds from "@/components/admin/AdminAttributeKinds";
 import AdminCoupons from "@/components/admin/AdminCoupons";
 import AdminWarranty from "@/components/admin/AdminWarranty";
+import AdminInquiries from "@/components/admin/AdminInquiries";
 import AdminAccounting, { type MonthlyRow } from "@/components/admin/AdminAccounting";
 import { REVENUE_STATUSES } from "@/lib/accounting";
 
@@ -159,6 +160,16 @@ export default async function AdminPage() {
 
   const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: "desc" } });
 
+  // Custom-stick inquiries (clubs/schools/teams) + general contact messages.
+  const inquiryRows = await prisma.clubInquiry.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  const contactRows = await prisma.contactMessage.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+
   const claims = await prisma.warrantyClaim.findMany({
     orderBy: { createdAt: "desc" },
     take: 30,
@@ -240,6 +251,7 @@ export default async function AdminPage() {
             inStock: p.inStock,
             preorder: p.preorder,
             active: p.active,
+            comingSoon: p.comingSoon,
             fixedFlex: p.fixedFlex,
             fixedCurve: p.fixedCurve,
             fixedHand: p.fixedHand,
@@ -319,6 +331,25 @@ export default async function AdminPage() {
             timesRedeemed: c.timesRedeemed,
             startsAt: c.startsAt ? c.startsAt.toISOString() : null,
             expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
+          }))}
+        />
+        <AdminInquiries
+          inquiries={inquiryRows.map((q) => ({
+            id: q.id,
+            orgType: q.orgType,
+            clubName: q.clubName,
+            contact: q.contact,
+            email: q.email,
+            message: q.message,
+            createdAt: q.createdAt.toISOString(),
+          }))}
+          contacts={contactRows.map((m) => ({
+            id: m.id,
+            name: m.name,
+            email: m.email,
+            subject: m.subject,
+            message: m.message,
+            createdAt: m.createdAt.toISOString(),
           }))}
         />
         <AdminWarranty

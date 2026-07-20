@@ -10,6 +10,9 @@ import StickPhoto from "@/components/StickPhoto";
 // `stock` is the live on-hand count for IN_STOCK minis (item.inStock flag).
 // When an IN_STOCK mini hits 0 it falls back to pre-order rather than going
 // unbuyable. Pre-order minis (item.inStock undefined) never pass `stock`.
+//
+// `item.comingSoon` (admin-toggled) renders a teaser card instead: same
+// art, "Coming Soon" pill, no link, no price — can't be opened or bought.
 export default function MiniCard({
   item,
   stock,
@@ -22,31 +25,61 @@ export default function MiniCard({
   const accent = item.accent ?? "#18181b";
   const colorway = item.category === "MINI_FUN" ? "fun" : "club";
 
+  const art = (
+    <div
+      className="relative flex h-44 items-center justify-center"
+      style={{
+        background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 55%, #0a0a0a 100%)`,
+      }}
+    >
+      <StickPhoto colorway={colorway} className="h-40 w-full drop-shadow-lg" />
+      <span
+        className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-bold ${
+          item.comingSoon
+            ? "bg-ink text-paper"
+            : shipsNow
+              ? "bg-volt text-ink"
+              : "bg-white/95 text-ink"
+        }`}
+      >
+        {item.comingSoon ? "Coming Soon" : shipsNow ? "In Stock" : "Pre-order"}
+      </span>
+      {item.badge && !item.comingSoon && (
+        <span className="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-xs font-bold text-volt">
+          {item.badge}
+        </span>
+      )}
+    </div>
+  );
+
+  if (item.comingSoon) {
+    return (
+      <div className="flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white">
+        {art}
+        <div className="flex flex-1 flex-col p-5">
+          <h3 className="text-lg font-bold text-ink">{item.name}</h3>
+          <p className="mt-1 line-clamp-2 text-sm text-black/60">
+            {item.description}
+          </p>
+          <div className="mt-4 flex flex-1 items-end justify-between">
+            <span className="text-xl font-black text-ink/60">
+              {fmtPrice(item.priceCents)}
+            </span>
+            <span className="text-sm font-bold text-black/40">
+              Design in progress
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Link
       href={`/mini-sticks/${item.slug}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-black/10 bg-white transition hover:-translate-y-0.5 hover:shadow-xl"
     >
-      <div
-        className="relative flex h-44 items-center justify-center"
-        style={{
-          background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 55%, #0a0a0a 100%)`,
-        }}
-      >
-        <StickPhoto colorway={colorway} className="h-40 w-full drop-shadow-lg" />
-        <span
-          className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-bold ${
-            shipsNow ? "bg-volt text-ink" : "bg-white/95 text-ink"
-          }`}
-        >
-          {shipsNow ? "In Stock" : "Pre-order"}
-        </span>
-        {item.badge && (
-          <span className="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-xs font-bold text-volt">
-            {item.badge}
-          </span>
-        )}
-      </div>
+      {art}
       <div className="flex flex-1 flex-col p-5">
         <h3 className="text-lg font-bold text-ink">{item.name}</h3>
         <p className="mt-1 line-clamp-2 text-sm text-black/60">{item.description}</p>

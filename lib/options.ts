@@ -142,6 +142,20 @@ export function optionsFromRows(
   };
 }
 
+// Standard colors for plain (non-configurable) minis — the active COLOR rows
+// scoped to the given category (rows with category ALL apply too). Admin adds/
+// removes colors from the Pre-Order Options table; no code change needed.
+// Returns [] on DB failure so callers can hide the picker gracefully.
+export async function getStandardColors(category: string): Promise<string[]> {
+  try {
+    const rows = await loadRows();
+    return scoped(rows, "COLOR", "", category).map((r) => r.value);
+  } catch (e) {
+    console.error("getStandardColors DB error", e);
+    return [];
+  }
+}
+
 // Merge DB-sourced options onto a pre-order catalog item. Returns the item
 // unchanged if it isn't configurable, or if the DB yields no usable options.
 export async function withDbOptions(item: CatalogItem): Promise<CatalogItem> {

@@ -9,7 +9,8 @@ import {
   clubDiscountCents,
   nextBatch,
   CLUB_STICK_SLUG,
-  CLUB_DISCOUNT_THRESHOLD,
+  CLUB_MINI_DISCOUNT_THRESHOLD,
+  CLUB_FULL_DISCOUNT_THRESHOLD,
   type CatalogItem,
 } from "@/lib/catalog";
 
@@ -131,32 +132,54 @@ describe("clubDiscountCents", () => {
   const line = (quantity: number) => ({
     slug: CLUB_STICK_SLUG,
     quantity,
-    priceCents: 2799,
+    priceCents: 3499,
+  });
+  const fullLine = (quantity: number, category = "FULL_STICK") => ({
+    slug: "elite-senior-stick",
+    quantity,
+    priceCents: 11900,
+    category,
   });
 
-  it("is zero at or below the threshold", () => {
-    expect(clubDiscountCents([line(CLUB_DISCOUNT_THRESHOLD)])).toBe(0);
+  it("is zero below the mini threshold", () => {
+    expect(clubDiscountCents([line(CLUB_MINI_DISCOUNT_THRESHOLD - 1)])).toBe(0);
     expect(clubDiscountCents([line(1)])).toBe(0);
   });
 
-  it("applies 10% once quantity passes the threshold", () => {
-    const qty = CLUB_DISCOUNT_THRESHOLD + 1; // 21
-    const expected = Math.round(2799 * qty * 0.1);
+  it("applies 10% at the mini threshold (inclusive, 50+)", () => {
+    const qty = CLUB_MINI_DISCOUNT_THRESHOLD; // 50
+    const expected = Math.round(3499 * qty * 0.1);
     expect(clubDiscountCents([line(qty)])).toBe(expected);
   });
 
-  it("sums club lines and ignores non-club lines", () => {
+  it("sums club-mini lines and ignores non-qualifying lines", () => {
     const lines = [
-      line(15),
-      line(10), // 25 club total > 20
-      { slug: "elite-senior-stick", quantity: 99, priceCents: 11900 },
+      line(30),
+      line(25), // 55 club minis ≥ 50
+      { slug: "elite-senior-stick", quantity: 5, priceCents: 11900, category: "FULL_STICK" },
     ];
-    const expected = Math.round(2799 * 25 * 0.1);
+    const expected = Math.round(3499 * 55 * 0.1);
     expect(clubDiscountCents(lines)).toBe(expected);
   });
 
-  it("returns 0 when there are no club lines", () => {
+  it("applies 10% to 20+ full-size sticks (FULL_STICK + GOALIE mix)", () => {
+    expect(clubDiscountCents([fullLine(CLUB_FULL_DISCOUNT_THRESHOLD - 1)])).toBe(0);
+    const lines = [fullLine(15), fullLine(5, "GOALIE")]; // 20 total
+    const expected = Math.round(11900 * 20 * 0.1);
+    expect(clubDiscountCents(lines)).toBe(expected);
+  });
+
+  it("stacks both tracks, each on its own subtotal", () => {
+    const lines = [line(50), fullLine(20)];
+    const expected = Math.round(3499 * 50 * 0.1) + Math.round(11900 * 20 * 0.1);
+    expect(clubDiscountCents(lines)).toBe(expected);
+  });
+
+  it("returns 0 when no lines qualify", () => {
+    // Full sticks without category (legacy lines) don't count toward the full track.
     expect(clubDiscountCents([{ slug: "elite-senior-stick", quantity: 50, priceCents: 11900 }])).toBe(0);
+    // Plain/Fun minis don't count toward the mini track.
+    expect(clubDiscountCents([{ slug: "mini-stick", quantity: 99, priceCents: 2699, category: "MINI_PLAIN" }])).toBe(0);
   });
 });
 

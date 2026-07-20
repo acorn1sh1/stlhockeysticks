@@ -11,9 +11,15 @@ export async function POST(req: Request) {
   if (!body?.clubName || !body?.email || !body?.contact || !body?.message) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
+  // Who's asking — club, school, team, or other. Defaults to CLUB for old
+  // clients that don't send it.
+  const ORG_TYPES = new Set(["CLUB", "SCHOOL", "TEAM", "OTHER"]);
+  const orgType = ORG_TYPES.has(String(body.orgType)) ? String(body.orgType) : "CLUB";
+
   try {
     await prisma.clubInquiry.create({
       data: {
+        orgType,
         clubName: String(body.clubName).slice(0, 200),
         contact: String(body.contact).slice(0, 200),
         email: String(body.email).slice(0, 200),

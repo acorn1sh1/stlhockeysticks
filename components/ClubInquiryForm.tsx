@@ -20,15 +20,24 @@ export default function ClubInquiryForm() {
   if (state === "done")
     return (
       <div className="mt-4 rounded-xl bg-volt/20 p-4 text-sm font-semibold">
-        Got it! We&apos;ll reach out about your club&apos;s custom stick soon.
+        Got it! We&apos;ll reach out about your custom stick soon.
       </div>
     );
 
   return (
     <form onSubmit={onSubmit} className="mt-4 space-y-4 text-sm">
       <div>
-        <label className="mb-1 block font-bold" htmlFor="clubName">Club name</label>
-        <input id="clubName" name="clubName" required className="w-full rounded-lg border border-black/20 px-3 py-2" placeholder="Your club name" />
+        <label className="mb-1 block font-bold" htmlFor="orgType">Who are you ordering for?</label>
+        <select id="orgType" name="orgType" required defaultValue="CLUB" className="w-full rounded-lg border border-black/20 bg-white px-3 py-2">
+          <option value="CLUB">Hockey club</option>
+          <option value="SCHOOL">School</option>
+          <option value="TEAM">Team</option>
+          <option value="OTHER">Something else</option>
+        </select>
+      </div>
+      <div>
+        <label className="mb-1 block font-bold" htmlFor="clubName">Club / school / team name</label>
+        <input id="clubName" name="clubName" required className="w-full rounded-lg border border-black/20 px-3 py-2" placeholder="Your organization's name" />
       </div>
       <div>
         <label className="mb-1 block font-bold" htmlFor="contact">Your name</label>

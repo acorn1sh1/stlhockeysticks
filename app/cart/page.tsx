@@ -199,7 +199,7 @@ export default function CartPage() {
           </div>
           {discountCents > 0 && (
             <div className="mt-1 flex justify-between text-sm font-semibold text-volt-dark">
-              <span>10% Team Donation Discount (20+ club sticks)</span>
+              <span>10% Team Donation (50+ club minis / 20+ full sticks)</span>
               <span>−{fmtPrice(discountCents)}</span>
             </div>
           )}
