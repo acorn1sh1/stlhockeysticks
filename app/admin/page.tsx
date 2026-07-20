@@ -231,6 +231,11 @@ export default async function AdminPage() {
         }))}
         categories={categoryRows.map((c) => ({ key: c.key, label: c.label }))}
         sizingTiers={sizingTierRows.map((t) => ({ key: t.key, label: t.label }))}
+        clubs={[...new Set(
+          allProducts
+            .filter((p) => p.category.includes("CLUB") && p.clubName)
+            .map((p) => p.clubName as string)
+        )].sort()}
         options={optionValues
           .filter((o) => o.active)
           .map((o) => ({

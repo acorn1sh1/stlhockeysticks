@@ -77,6 +77,8 @@ export async function POST(req: Request) {
   if (typeof b.active === "boolean") data.active = b.active;
   if (typeof b.comingSoon === "boolean") data.comingSoon = b.comingSoon;
   // Locked build fields for IN_STOCK SKUs (display only, no configurator).
+  if (typeof b.clubName === "string") data.clubName = b.clubName.slice(0, 200) || null;
+  if (b.clubName === null) data.clubName = null;
   if (b.fixedFlex != null) data.fixedFlex = b.fixedFlex === "" ? null : Math.floor(Number(b.fixedFlex));
   if (typeof b.fixedCurve === "string") data.fixedCurve = b.fixedCurve || null;
   if (typeof b.fixedHand === "string") data.fixedHand = b.fixedHand || null;
@@ -116,6 +118,7 @@ export async function POST(req: Request) {
           type: (data.type as "PREORDER" | "IN_STOCK") ?? "IN_STOCK",
           active: (data.active as boolean) ?? true,
           comingSoon: (data.comingSoon as boolean) ?? false,
+          clubName: (data.clubName as string | null) ?? null,
           fixedFlex: (data.fixedFlex as number | null) ?? null,
           fixedCurve: (data.fixedCurve as string | null) ?? null,
           fixedHand: (data.fixedHand as string | null) ?? null,

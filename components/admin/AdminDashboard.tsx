@@ -83,6 +83,7 @@ export default function AdminDashboard({
   categories,
   sizingTiers,
   options,
+  clubs,
 }: {
   stock: StockRow[];
   batches: BatchRow[];
@@ -90,6 +91,7 @@ export default function AdminDashboard({
   categories: KeyLabel[];
   sizingTiers: KeyLabel[];
   options: OptionLite[];
+  clubs: string[];
 }) {
   const router = useRouter();
   const [addingStock, setAddingStock] = useState(false);
@@ -132,6 +134,7 @@ export default function AdminDashboard({
           categories={categories}
           sizingTiers={sizingTiers}
           options={options}
+          clubs={clubs}
           onDone={() => { setAddingStock(false); router.refresh(); }}
         />
       )}
@@ -363,11 +366,13 @@ function AddStockSku({
   categories,
   sizingTiers,
   options,
+  clubs,
   onDone,
 }: {
   categories: KeyLabel[];
   sizingTiers: KeyLabel[];
   options: OptionLite[];
+  clubs: string[];
   onDone: () => void;
 }) {
   const [f, setF] = useState({
@@ -377,11 +382,15 @@ function AddStockSku({
     curve: "",
     hand: "",
     color: "",
+    club: "",
     length: "",
     price: "",
     inStock: "0",
     nameOverride: "",
   });
+  // Club-design categories carry the club's colors/logo, not a paint color —
+  // so for these the Color field becomes a Club picker instead.
+  const isClub = f.category.includes("CLUB");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const set = (k: string, v: string) =>
@@ -416,19 +425,22 @@ function AddStockSku({
 
   const catLabel = categories.find((c) => c.key === f.category)?.label ?? f.category;
   const tierLabel = sizingTiers.find((t) => t.key === f.tier)?.label ?? "";
+  // For club minis the "color" slot is the club; otherwise the paint color.
+  const colorPart = isClub ? f.club : f.color;
   // Auto name/slug from the build, e.g. "In-Stock Senior 85 P92 Right Black"
+  // or "In-Stock Mini Club Affton Americans".
   const autoName = [
     "In-Stock",
-    tierLabel || catLabel,
+    isClub ? catLabel : tierLabel || catLabel,
     f.flex,
     f.curve,
     f.hand,
-    f.color,
+    colorPart,
   ]
     .filter(Boolean)
     .join(" ");
   const name = f.nameOverride.trim() || autoName;
-  const slug = ["instock", f.tier || f.category, f.flex, f.curve, f.hand, f.color, f.length]
+  const slug = ["instock", f.tier || f.category, f.flex, f.curve, f.hand, colorPart, f.length]
     .filter(Boolean)
     .join("-")
     .toLowerCase()
@@ -448,10 +460,13 @@ function AddStockSku({
       inStock: Number(f.inStock),
       preorder: false,
       configurable: false,
+      clubName: isClub ? f.club || null : null,
       fixedFlex: f.flex || "",
       fixedCurve: f.curve,
       fixedHand: f.hand,
-      fixedColor: f.color,
+      // Club minis put the club name in the color slot so it shows on the
+      // build spec / supplier export; regular sticks use the paint color.
+      fixedColor: colorPart,
       fixedLength: f.length,
     });
     setBusy(false);
@@ -509,7 +524,23 @@ function AddStockSku({
       <Picker field="flex" label="Flex" opts={flexes} />
       <Picker field="curve" label="Curve" opts={curves} />
       <Picker field="hand" label="Hand" opts={hands} />
-      <Picker field="color" label="Color" opts={colors} optional />
+      {isClub ? (
+        <label className="text-sm">
+          <span className={lbl}>Club</span>
+          <input
+            list="stock-club-list"
+            value={f.club}
+            onChange={(e) => set("club", e.target.value)}
+            placeholder="Club name"
+            className={`${sel} w-full`}
+          />
+          <datalist id="stock-club-list">
+            {clubs.map((c) => <option key={c} value={c} />)}
+          </datalist>
+        </label>
+      ) : (
+        <Picker field="color" label="Color" opts={colors} optional />
+      )}
       <Picker field="length" label="Length" opts={lengths} optional />
       <label className="text-sm">
         <span className={lbl}>Price (USD)</span>
