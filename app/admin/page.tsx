@@ -229,7 +229,17 @@ export default async function AdminPage() {
           batchId: o.batchId ?? null,
           batchName: o.batch?.name ?? null,
         }))}
-        categories={categoryRows.map((c) => c.key)}
+        categories={categoryRows.map((c) => ({ key: c.key, label: c.label }))}
+        sizingTiers={sizingTierRows.map((t) => ({ key: t.key, label: t.label }))}
+        options={optionValues
+          .filter((o) => o.active)
+          .map((o) => ({
+            kind: o.kind,
+            value: o.value,
+            label: o.label,
+            sizing: o.sizing,
+            category: o.category,
+          }))}
       />
 
       <div className="mx-auto max-w-5xl space-y-12 px-4">

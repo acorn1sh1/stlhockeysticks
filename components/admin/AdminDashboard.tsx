@@ -73,16 +73,23 @@ async function post(url: string, body: unknown) {
   });
 }
 
+type OptionLite = { kind: string; value: string; label: string | null; sizing: string; category: string };
+type KeyLabel = { key: string; label: string };
+
 export default function AdminDashboard({
   stock,
   batches,
   orders,
   categories,
+  sizingTiers,
+  options,
 }: {
   stock: StockRow[];
   batches: BatchRow[];
   orders: OrderRow[];
-  categories: string[];
+  categories: KeyLabel[];
+  sizingTiers: KeyLabel[];
+  options: OptionLite[];
 }) {
   const router = useRouter();
   const [addingStock, setAddingStock] = useState(false);
@@ -123,6 +130,8 @@ export default function AdminDashboard({
       {addingStock && (
         <AddStockSku
           categories={categories}
+          sizingTiers={sizingTiers}
+          options={options}
           onDone={() => { setAddingStock(false); router.refresh(); }}
         />
       )}
@@ -346,54 +355,189 @@ function StockEditor({ row, onSaved }: { row: StockRow; onSaved: () => void }) {
   );
 }
 
-function AddStockSku({ categories, onDone }: { categories: string[]; onDone: () => void }) {
+// Add an in-stock SKU by choosing its build from the same option catalog the
+// pre-order configurator uses, so every stocked stick matches a real build.
+// Flex/curve/hand/color/length come from OptionValue rows (scoped by the
+// chosen size tier + category); slug and name auto-derive from the picks.
+function AddStockSku({
+  categories,
+  sizingTiers,
+  options,
+  onDone,
+}: {
+  categories: KeyLabel[];
+  sizingTiers: KeyLabel[];
+  options: OptionLite[];
+  onDone: () => void;
+}) {
   const [f, setF] = useState({
-    name: "",
-    slug: "",
-    category: categories[0] ?? "FULL_STICK",
+    category: categories[0]?.key ?? "FULL_STICK",
+    tier: sizingTiers[0]?.key ?? "",
+    flex: "",
+    curve: "",
+    hand: "",
+    color: "",
+    length: "",
     price: "",
     inStock: "0",
+    nameOverride: "",
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
+  const set = (k: string, v: string) =>
+    setF((p) => {
+      const next = { ...p, [k]: v };
+      // Changing size or category can invalidate tier-scoped flex/length picks.
+      if (k === "tier" || k === "category") {
+        next.flex = "";
+        next.length = "";
+      }
+      return next;
+    });
+
+  // Catalog values for a given attribute kind, scoped to the current tier +
+  // category (ALL-scoped values always included). label falls back to value.
+  const valuesFor = (kind: string) =>
+    options
+      .filter(
+        (o) =>
+          o.kind === kind &&
+          (o.sizing === "ALL" || o.sizing === f.tier) &&
+          (o.category === "ALL" || o.category === f.category)
+      )
+      // de-dupe by value (same value can exist across scopes)
+      .filter((o, i, a) => a.findIndex((x) => x.value === o.value) === i);
+
+  const flexes = valuesFor("FLEX");
+  const curves = valuesFor("CURVE");
+  const hands = valuesFor("HAND");
+  const colors = valuesFor("COLOR");
+  const lengths = valuesFor("LENGTH");
+
+  const catLabel = categories.find((c) => c.key === f.category)?.label ?? f.category;
+  const tierLabel = sizingTiers.find((t) => t.key === f.tier)?.label ?? "";
+  // Auto name/slug from the build, e.g. "In-Stock Senior 85 P92 Right Black"
+  const autoName = [
+    "In-Stock",
+    tierLabel || catLabel,
+    f.flex,
+    f.curve,
+    f.hand,
+    f.color,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const name = f.nameOverride.trim() || autoName;
+  const slug = ["instock", f.tier || f.category, f.flex, f.curve, f.hand, f.color, f.length]
+    .filter(Boolean)
+    .join("-")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-");
 
   async function submit() {
     setBusy(true);
     setError("");
     const res = await post("/api/admin/product", {
-      slug: f.slug,
-      name: f.name,
-      description: f.name,
+      slug,
+      name,
+      description: name,
       category: f.category,
+      sizingTier: f.tier || null,
       priceCents: Math.round(Number(f.price) * 100),
       inStock: Number(f.inStock),
       preorder: false,
       configurable: false,
+      fixedFlex: f.flex || "",
+      fixedCurve: f.curve,
+      fixedHand: f.hand,
+      fixedColor: f.color,
+      fixedLength: f.length,
     });
     setBusy(false);
     if (res.ok) onDone();
     else setError((await res.json().catch(() => ({})))?.error ?? "Failed");
   }
 
-  return (
-    <div className="mt-4 grid gap-3 rounded-2xl border border-black/10 bg-white p-5 sm:grid-cols-2">
-      <input placeholder="Name" value={f.name} onChange={(e) => set("name", e.target.value)} className="rounded-lg border border-black/20 px-3 py-2 text-sm" />
-      <input placeholder="slug (e.g. instock-senior-90-p28)" value={f.slug} onChange={(e) => set("slug", e.target.value)} className="rounded-lg border border-black/20 px-3 py-2 text-sm" />
-      <select value={f.category} onChange={(e) => set("category", e.target.value)} className="rounded-lg border border-black/20 px-3 py-2 text-sm">
-        {categories.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
+  const sel = "rounded-lg border border-black/20 bg-white px-3 py-2 text-sm";
+  const lbl = "mb-1 block text-xs font-bold uppercase text-black/40";
+  // A dropdown that shows a hint when the catalog has no values for this build.
+  const Picker = ({
+    field,
+    label,
+    opts,
+    optional,
+  }: {
+    field: string;
+    label: string;
+    opts: OptionLite[];
+    optional?: boolean;
+  }) => (
+    <label className="text-sm">
+      <span className={lbl}>{label}</span>
+      <select
+        value={f[field as keyof typeof f]}
+        onChange={(e) => set(field, e.target.value)}
+        disabled={opts.length === 0}
+        className={`${sel} w-full disabled:bg-black/5 disabled:text-black/30`}
+      >
+        <option value="">{opts.length === 0 ? "— none in catalog —" : optional ? "— none —" : "Choose…"}</option>
+        {opts.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label ?? o.value}
+          </option>
+        ))}
       </select>
-      <input type="number" step="0.01" placeholder="Price (USD)" value={f.price} onChange={(e) => set("price", e.target.value)} className="rounded-lg border border-black/20 px-3 py-2 text-sm" />
-      <input type="number" placeholder="Starting stock" value={f.inStock} onChange={(e) => set("inStock", e.target.value)} className="rounded-lg border border-black/20 px-3 py-2 text-sm" />
-      <div className="sm:col-span-2 flex items-center gap-3">
-        <button onClick={submit} disabled={busy || !f.slug || !f.name || !f.price} className="rounded-full bg-ink px-5 py-2 text-sm font-bold text-paper hover:bg-ink/80 disabled:opacity-40">
+    </label>
+  );
+
+  return (
+    <div className="mt-4 grid gap-3 rounded-2xl border border-black/10 bg-white p-5 sm:grid-cols-3">
+      <label className="text-sm">
+        <span className={lbl}>Type</span>
+        <select value={f.category} onChange={(e) => set("category", e.target.value)} className={`${sel} w-full`}>
+          {categories.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+        </select>
+      </label>
+      <label className="text-sm">
+        <span className={lbl}>Size</span>
+        <select value={f.tier} onChange={(e) => set("tier", e.target.value)} className={`${sel} w-full`}>
+          <option value="">— none —</option>
+          {sizingTiers.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+        </select>
+      </label>
+      <Picker field="flex" label="Flex" opts={flexes} />
+      <Picker field="curve" label="Curve" opts={curves} />
+      <Picker field="hand" label="Hand" opts={hands} />
+      <Picker field="color" label="Color" opts={colors} optional />
+      <Picker field="length" label="Length" opts={lengths} optional />
+      <label className="text-sm">
+        <span className={lbl}>Price (USD)</span>
+        <input type="number" step="0.01" min="0" placeholder="0.00" value={f.price} onChange={(e) => set("price", e.target.value)} className={`${sel} w-full text-right`} />
+      </label>
+      <label className="text-sm">
+        <span className={lbl}>Starting stock</span>
+        <input type="number" min="0" value={f.inStock} onChange={(e) => set("inStock", e.target.value)} className={`${sel} w-full text-right`} />
+      </label>
+      <label className="text-sm sm:col-span-3">
+        <span className={lbl}>Name (auto — edit to override)</span>
+        <input value={f.nameOverride} placeholder={autoName || "Pick a build above…"} onChange={(e) => set("nameOverride", e.target.value)} className={`${sel} w-full`} />
+        <span className="mt-1 block text-xs text-black/40">Slug: {slug || "—"}</span>
+      </label>
+      <div className="sm:col-span-3 flex items-center gap-3">
+        <button
+          onClick={submit}
+          disabled={busy || !name || !f.price || !slug}
+          className="rounded-full bg-ink px-5 py-2 text-sm font-bold text-paper hover:bg-ink/80 disabled:opacity-40"
+        >
           {busy ? "Saving..." : "Add SKU"}
         </button>
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
-      <p className="text-xs text-black/40 sm:col-span-2">
-        Description, image, specs, badge, and locked flex/curve/hand/color
-        build can be set afterward from Products &amp; Prices below.
+      <p className="text-xs text-black/40 sm:col-span-3">
+        Build options come from your Pre-Order Options catalog (scoped to the
+        size &amp; type you pick). Image, specs, and badge can be added afterward
+        from Products &amp; Prices below.
       </p>
     </div>
   );
@@ -439,8 +583,8 @@ function BatchRowEditor({ row, stock, onSaved }: { row: BatchRow; stock: StockRo
           <div className="text-xs text-black/50">
             Cutoff {fmtDate(row.cutoffDate)} · Pickup {fmtDate(row.pickupStart)}–
             {fmtDate(row.pickupEnd)} · {row.orderCount} order{row.orderCount === 1 ? "" : "s"}
-            {row.stockLines.length > 0 &&
-              ` · restock ${row.stockLines.reduce((s, l) => s + l.qty, 0)} unit${row.stockLines.reduce((s, l) => s + l.qty, 0) === 1 ? "" : "s"}`}
+            {(row.stockLines ?? []).length > 0 &&
+              ` · restock ${(row.stockLines ?? []).reduce((s, l) => s + l.qty, 0)} unit${(row.stockLines ?? []).reduce((s, l) => s + l.qty, 0) === 1 ? "" : "s"}`}
           </div>
           <div className="mt-0.5 text-xs text-black/50">
             Revenue {fmtPrice(row.revenueCents)} · Landed cost {fmtPrice(landed)} ·{" "}
@@ -506,7 +650,7 @@ function BatchDetailEditor({ row, stock, onSaved }: { row: BatchRow; stock: Stoc
   // Restock lines: local editable copy. qty edited as string; qty 0 on save
   // deletes the line server-side. Received lines are locked (display only).
   const [lines, setLines] = useState<{ productId: string; name: string; qty: string; received: boolean }[]>(
-    () => row.stockLines.map((l) => ({ ...l, qty: String(l.qty) }))
+    () => (row.stockLines ?? []).map((l) => ({ ...l, qty: String(l.qty) }))
   );
   const [pickerId, setPickerId] = useState("");
   const available = stock.filter((s) => !lines.some((l) => l.productId === s.id));
