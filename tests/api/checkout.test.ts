@@ -95,7 +95,10 @@ describe("POST /api/checkout", () => {
     expect(cloverArg.lines[0]).toMatchObject({ priceCents: 23220, quantity: 1 });
   });
 
-  it("applies the 10% club donation discount past 20 sticks", async () => {
+  it("applies the 10% club donation discount at 50+ club minis (inclusive)", async () => {
+    // 2026-07-19 donation rework: the mini track needs 50+ MINI_CLUB units
+    // (threshold inclusive); 25 units would get $0. The full-stick track
+    // (20+) is covered by the clubDiscountCents unit tests in catalog.test.ts.
     prismaMock.product.findMany.mockResolvedValue([
       product({ id: "prod_club", slug: "club-custom-mini-stick", name: "Club Custom Mini Stick", priceCents: 2799, category: "MINI_CLUB" }),
     ]);
@@ -104,13 +107,13 @@ describe("POST /api/checkout", () => {
     okClover();
 
     const res = await POST(
-      jsonRequest({ email: "coach@club.com", name: "Coach K", lines: [{ slug: "club-custom-mini-stick", quantity: 25 }] })
+      jsonRequest({ email: "coach@club.com", name: "Coach K", lines: [{ slug: "club-custom-mini-stick", quantity: 50 }] })
     );
     expect(res.status).toBe(200);
     const orderArg = prismaMock.order.create.mock.calls[0][0].data;
-    const expectedDiscount = Math.round(2799 * 25 * 0.1);
+    const expectedDiscount = Math.round(2799 * 50 * 0.1);
     expect(orderArg.discountCents).toBe(expectedDiscount);
-    expect(orderArg.subtotalCents).toBe(2799 * 25 - expectedDiscount);
+    expect(orderArg.subtotalCents).toBe(2799 * 50 - expectedDiscount);
     // Clover rejects negative shoppingCart.lineItems[].price ("Line item
     // prices should be positive"), so the discount must be folded into
     // positive-priced lines instead of sent as its own negative line — and
@@ -121,7 +124,7 @@ describe("POST /api/checkout", () => {
       (n: number, l: { priceCents: number; quantity: number }) => n + l.priceCents * l.quantity,
       0
     );
-    expect(cloverTotal).toBe(2799 * 25 - expectedDiscount);
+    expect(cloverTotal).toBe(2799 * 50 - expectedDiscount);
   });
 
   it("rejects an invalid coupon at checkout (server re-validates)", async () => {
