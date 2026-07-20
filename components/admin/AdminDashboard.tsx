@@ -4,7 +4,7 @@ import { fmtPrice } from "@/lib/catalog";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type StockRow = { slug: string; name: string; inStock: number; priceCents: number };
+type StockRow = { id: string; slug: string; name: string; inStock: number; priceCents: number };
 type BatchProduct = {
   productId: string;
   name: string;
@@ -26,6 +26,13 @@ type BatchRow = {
   otherCostCents: number;
   costNotes: string | null;
   products: BatchProduct[]; // confirmed units in this batch, aggregated by product
+  stockLines: BatchStockLineRow[]; // inventory restock riding on this supplier order
+};
+type BatchStockLineRow = {
+  productId: string;
+  name: string;
+  qty: number;
+  received: boolean; // already counted into inStock when the batch arrived
 };
 type OrderRow = {
   id: string;
@@ -158,7 +165,7 @@ export default function AdminDashboard({
           <p className="text-sm text-black/50">No batches yet.</p>
         )}
         {batches.map((b) => (
-          <BatchRowEditor key={b.id} row={b} onSaved={() => router.refresh()} />
+          <BatchRowEditor key={b.id} row={b} stock={stock} onSaved={() => router.refresh()} />
         ))}
       </div>
 
@@ -400,7 +407,7 @@ function batchCogsCents(row: BatchRow) {
   );
 }
 
-function BatchRowEditor({ row, onSaved }: { row: BatchRow; onSaved: () => void }) {
+function BatchRowEditor({ row, stock, onSaved }: { row: BatchRow; stock: StockRow[]; onSaved: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
   const landed = batchCogsCents(row) + row.freightCents + row.tariffCents + row.otherCostCents;
@@ -432,6 +439,8 @@ function BatchRowEditor({ row, onSaved }: { row: BatchRow; onSaved: () => void }
           <div className="text-xs text-black/50">
             Cutoff {fmtDate(row.cutoffDate)} · Pickup {fmtDate(row.pickupStart)}–
             {fmtDate(row.pickupEnd)} · {row.orderCount} order{row.orderCount === 1 ? "" : "s"}
+            {row.stockLines.length > 0 &&
+              ` · restock ${row.stockLines.reduce((s, l) => s + l.qty, 0)} unit${row.stockLines.reduce((s, l) => s + l.qty, 0) === 1 ? "" : "s"}`}
           </div>
           <div className="mt-0.5 text-xs text-black/50">
             Revenue {fmtPrice(row.revenueCents)} · Landed cost {fmtPrice(landed)} ·{" "}
@@ -472,12 +481,12 @@ function BatchRowEditor({ row, onSaved }: { row: BatchRow; onSaved: () => void }
           </button>
         </div>
       </div>
-      {expanded && <BatchDetailEditor row={row} onSaved={() => { setExpanded(false); onSaved(); }} />}
+      {expanded && <BatchDetailEditor row={row} stock={stock} onSaved={() => { setExpanded(false); onSaved(); }} />}
     </div>
   );
 }
 
-function BatchDetailEditor({ row, onSaved }: { row: BatchRow; onSaved: () => void }) {
+function BatchDetailEditor({ row, stock, onSaved }: { row: BatchRow; stock: StockRow[]; onSaved: () => void }) {
   const [name, setName] = useState(row.name);
   const [cutoffDate, setCutoffDate] = useState(toDateInput(row.cutoffDate));
   const [pickupStart, setPickupStart] = useState(toDateInput(row.pickupStart));
@@ -494,6 +503,20 @@ function BatchDetailEditor({ row, onSaved }: { row: BatchRow; onSaved: () => voi
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Restock lines: local editable copy. qty edited as string; qty 0 on save
+  // deletes the line server-side. Received lines are locked (display only).
+  const [lines, setLines] = useState<{ productId: string; name: string; qty: string; received: boolean }[]>(
+    () => row.stockLines.map((l) => ({ ...l, qty: String(l.qty) }))
+  );
+  const [pickerId, setPickerId] = useState("");
+  const available = stock.filter((s) => !lines.some((l) => l.productId === s.id));
+
+  function addLine() {
+    const s = stock.find((x) => x.id === pickerId);
+    if (!s) return;
+    setLines((prev) => [...prev, { productId: s.id, name: s.name, qty: "1", received: false }]);
+    setPickerId("");
+  }
 
   async function save() {
     setBusy(true);
@@ -512,6 +535,15 @@ function BatchDetailEditor({ row, onSaved }: { row: BatchRow; onSaved: () => voi
         productId: p.productId,
         unitCostCents: Math.round(Number(unitCosts[p.productId] || 0) * 100),
       })),
+      stockLines: lines
+        .filter((l) => !l.received)
+        .map((l) => ({ productId: l.productId, qty: Math.max(0, Math.floor(Number(l.qty) || 0)) }))
+        // A line the admin removed from the list gets sent as qty 0 → delete.
+        .concat(
+          row.stockLines
+            .filter((orig) => !orig.received && !lines.some((l) => l.productId === orig.productId))
+            .map((orig) => ({ productId: orig.productId, qty: 0 }))
+        ),
     });
     setBusy(false);
     if (res.ok) onSaved();
@@ -597,6 +629,81 @@ function BatchDetailEditor({ row, onSaved }: { row: BatchRow; onSaved: () => voi
           No confirmed orders in this batch yet — unit costs appear here once orders come in.
         </p>
       )}
+
+      {/* Inventory restock riding on this supplier order */}
+      <div className="sm:col-span-4 mt-2 border-t border-black/10 pt-3">
+        <span className="text-xs font-bold uppercase text-black/40">
+          Restock in-stock inventory with this order
+        </span>
+        <p className="mt-1 text-xs text-black/40">
+          Adds shelf units of an in-stock SKU to the factory order (Build Sheet + Supplier
+          Order exports). When the batch is marked Arrived, these land in on-hand stock
+          automatically.
+        </p>
+        {lines.length > 0 && (
+          <div className="mt-2 divide-y divide-black/5 rounded-xl border border-black/10">
+            {lines.map((l, i) => (
+              <div key={l.productId} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                <div>
+                  <span className="font-semibold">{l.name}</span>
+                  {l.received && (
+                    <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-700">
+                      received — in stock
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {l.received ? (
+                    <span className="text-black/60">× {l.qty}</span>
+                  ) : (
+                    <>
+                      <input
+                        type="number"
+                        min={1}
+                        value={l.qty}
+                        onChange={(e) =>
+                          setLines((prev) => prev.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))
+                        }
+                        className="w-20 rounded-lg border border-black/20 px-2 py-1 text-right"
+                      />
+                      <button
+                        onClick={() => setLines((prev) => prev.filter((_, j) => j !== i))}
+                        className="rounded-full border border-red-200 px-2 py-0.5 text-[10px] font-bold text-red-600 hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="mt-2 flex items-center gap-2">
+          <select
+            value={pickerId}
+            onChange={(e) => setPickerId(e.target.value)}
+            className="rounded-lg border border-black/20 px-3 py-2 text-sm"
+          >
+            <option value="">Add a SKU to this order…</option>
+            {available.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} (on hand: {s.inStock})
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={addLine}
+            disabled={!pickerId}
+            className="rounded-full bg-ink px-4 py-1.5 text-sm font-bold text-paper hover:bg-ink/80 disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+        {stock.length === 0 && (
+          <p className="mt-1 text-xs text-black/40">No in-stock SKUs yet — add one in the Inventory section above.</p>
+        )}
+      </div>
 
       <div className="sm:col-span-4 flex items-center gap-3">
         <button onClick={save} disabled={busy} className="rounded-full bg-ink px-5 py-2 text-sm font-bold text-paper hover:bg-ink/80 disabled:opacity-40">

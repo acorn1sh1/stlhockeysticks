@@ -12,8 +12,10 @@ const categories = [
   { key: "MINI_CLUB", label: "Mini Club", sortOrder: 3 },
   { key: "MINI_FUN", label: "Mini Fun", sortOrder: 4 },
 ];
+// Bootstrap-only (see the SAFETY note above the product loop): create missing
+// lookup rows, never overwrite an existing one's admin-edited label/sort order.
 for (const c of categories) {
-  await prisma.category.upsert({ where: { key: c.key }, update: c, create: c });
+  await prisma.category.upsert({ where: { key: c.key }, update: {}, create: c });
 }
 
 const sizingTiers = [
@@ -23,7 +25,7 @@ const sizingTiers = [
   { key: "YTH", label: "Youth", tag: "Little rippers", sortOrder: 3 },
 ];
 for (const t of sizingTiers) {
-  await prisma.sizingTier.upsert({ where: { key: t.key }, update: t, create: t });
+  await prisma.sizingTier.upsert({ where: { key: t.key }, update: {}, create: t });
 }
 
 const attributeKinds = [
@@ -36,7 +38,7 @@ const attributeKinds = [
   { key: "PADDLE", label: "Paddle Size", unit: "\"", sortOrder: 6 },
 ];
 for (const k of attributeKinds) {
-  await prisma.attributeKind.upsert({ where: { key: k.key }, update: k, create: k });
+  await prisma.attributeKind.upsert({ where: { key: k.key }, update: {}, create: k });
 }
 console.log(`Seeded ${categories.length} categories, ${sizingTiers.length} sizing tiers, ${attributeKinds.length} attribute kinds.`);
 
@@ -284,13 +286,20 @@ const FIXED_BUILD = {
   "instock-junior-50-p92": { fixedFlex: 50, fixedCurve: "P92", fixedHand: "Right", fixedLength: '54"' },
 };
 
+// SAFETY: seed is a BOOTSTRAP, not a sync. It creates rows that don't exist
+// yet and NEVER overwrites an existing product — otherwise a reseed would
+// stomp admin-edited prices, inventory, badges, active flags, etc. (which is
+// exactly what happened once). `update: {}` = no-op on conflict, so existing
+// products are left 100% untouched; only brand-new slugs get inserted.
+// To intentionally change a seeded default on a live row, edit it in /admin
+// (or delete the row first, then reseed).
 for (const p of products) {
   // Derive the two-catalog type from the legacy preorder flag.
   const type = p.preorder === false ? "IN_STOCK" : "PREORDER";
   const data = { ...p, type, ...(FIXED_BUILD[p.slug] ?? {}) };
   await prisma.product.upsert({
     where: { slug: p.slug },
-    update: data,
+    update: {}, // never clobber an existing product's admin-managed fields
     create: data,
   });
 }
@@ -372,6 +381,9 @@ pushOpt("PADDLE", ['21"', '22"', '23"', '24"', '25"', '26"', '27"', '28"'], {
   defaultValue: '26"',
 });
 
+// Same bootstrap rule as products: create missing option rows, never
+// overwrite existing ones (admin edits upcharge, default, sort order, label,
+// active from /admin). `update: {}` = leave existing rows untouched.
 for (const ov of optionValues) {
   await prisma.optionValue.upsert({
     where: {
@@ -382,7 +394,7 @@ for (const ov of optionValues) {
         category: ov.category,
       },
     },
-    update: ov,
+    update: {}, // never clobber an existing option's admin-managed fields
     create: ov,
   });
 }

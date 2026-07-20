@@ -31,7 +31,10 @@ export async function GET(req: Request) {
   const batchId = new URL(req.url).searchParams.get("batchId");
   if (!batchId) return NextResponse.json({ error: "batchId required" }, { status: 400 });
 
-  const batch = await prisma.batch.findUnique({ where: { id: batchId } });
+  const batch = await prisma.batch.findUnique({
+    where: { id: batchId },
+    include: { stockLines: { include: { product: true } } },
+  });
   if (!batch) return NextResponse.json({ error: "Batch not found" }, { status: 404 });
 
   const orders = await prisma.order.findMany({
@@ -94,6 +97,24 @@ export async function GET(req: Request) {
           qty: item.quantity,
         });
     }
+  }
+
+  // Inventory restock lines — admin-added replenishment of in-stock SKUs,
+  // built from each SKU's locked fixed* spec. Tagged so the sheet shows
+  // they're stock, not a customer order.
+  for (const sl of batch.stockLines) {
+    const p = sl.product;
+    const row = {
+      flex: dash(p.fixedFlex),
+      curve: dash(p.fixedCurve),
+      hand: dash(p.fixedHand),
+      color: dash(p.fixedColor),
+      length: dash(p.fixedLength),
+    };
+    const key = [`${p.name} (RESTOCK)`, p.category, row.flex, row.curve, row.hand, row.color, row.length].join("|");
+    const existing = agg.get(key);
+    if (existing) existing.qty += sl.qty;
+    else agg.set(key, { product: `${p.name} (RESTOCK)`, category: p.category, ...row, qty: sl.qty });
   }
 
   const wb = new ExcelJS.Workbook();

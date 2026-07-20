@@ -23,7 +23,26 @@ model Batch {
   costNotes      String?
   unitCosts      BatchUnitCost[] // per-product cost overrides for this order
   expenses       Expense[] // ledger expenses attributed to this batch
+  stockLines     BatchStockLine[] // inventory restock lines riding on this supplier order
   createdAt    DateTime @default(now())
+}
+
+// Inventory restock riding on a batch's supplier order: "add N units of this
+// IN_STOCK SKU to the factory order". Included in the supplier export next to
+// pre-order lines. When the batch is marked ARRIVED, each unreceived line
+// increments Product.inStock once and flips `received` (so re-toggling the
+// status can't double-count).
+model BatchStockLine {
+  id         String   @id @default(cuid())
+  batchId    String
+  batch      Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  qty        Int
+  received   Boolean  @default(false) // inStock already incremented for this line
+  createdAt  DateTime @default(now())
+
+  @@unique([batchId, productId])
 }
 
 // Per-batch override of a product's unit cost — supplier quotes drift
@@ -88,6 +107,7 @@ model Product {
   fixedLength String?
   orderItems  OrderItem[]
   batchUnitCosts BatchUnitCost[]
+  batchStockLines BatchStockLine[] // restock lines on supplier orders
   productOptions ProductOption[] // per-stick option overrides (Phase 2)
   createdAt   DateTime @default(now())
 }

@@ -50,7 +50,7 @@ export async function GET(req: Request) {
 
   const batch = await prisma.batch.findUnique({
     where: { id: batchId },
-    include: { unitCosts: true },
+    include: { unitCosts: true, stockLines: { include: { product: true } } },
   });
   if (!batch) return NextResponse.json({ error: "Batch not found" }, { status: 404 });
 
@@ -101,6 +101,28 @@ export async function GET(req: Request) {
       if (existing) existing.qty += line.qty;
       else agg.set(key, line);
     }
+  }
+
+  // Inventory restock lines (admin-added in-stock replenishment riding on
+  // this supplier order). Build spec comes from the SKU's locked fixed*
+  // fields; identical specs merge with pre-order lines above.
+  for (const sl of batch.stockLines) {
+    const p = sl.product;
+    const line: Line = {
+      name: supplierName(p),
+      length: numOrBlank(String(p.fixedLength ?? "")),
+      model: String(p.fixedCurve ?? ""),
+      flex: numOrBlank(String(p.fixedFlex ?? "")),
+      hand: String(p.fixedHand ?? "Right"),
+      color: String(p.fixedColor ?? ""),
+      qty: sl.qty,
+      customName: "",
+      priceCents: costOverride.get(p.id) ?? p.costCents,
+    };
+    const key = [line.name, line.length, line.model, line.flex, line.hand, line.color, line.priceCents].join("|");
+    const existing = agg.get(key);
+    if (existing) existing.qty += line.qty;
+    else agg.set(key, line);
   }
 
   const lines = [

@@ -36,7 +36,7 @@ export default async function AdminPage() {
   const stockProducts = await prisma.product.findMany({
     where: { preorder: false, active: true },
     orderBy: { name: "asc" },
-    select: { slug: true, name: true, inStock: true, priceCents: true },
+    select: { id: true, slug: true, name: true, inStock: true, priceCents: true },
   });
 
   const allProducts = await prisma.product.findMany({
@@ -51,7 +51,11 @@ export default async function AdminPage() {
   const batchRows = await prisma.batch.findMany({
     orderBy: { cutoffDate: "desc" },
     take: 12,
-    include: { _count: { select: { orders: true } }, unitCosts: true },
+    include: {
+      _count: { select: { orders: true } },
+      unitCosts: true,
+      stockLines: { include: { product: { select: { name: true } } } },
+    },
   });
 
   // ---- Accounting inputs ----
@@ -205,6 +209,14 @@ export default async function AdminPage() {
             otherCostCents: b.otherCostCents,
             costNotes: b.costNotes,
             products: products.sort((a, z) => a.name.localeCompare(z.name)),
+            stockLines: b.stockLines
+              .map((sl) => ({
+                productId: sl.productId,
+                name: sl.product.name,
+                qty: sl.qty,
+                received: sl.received,
+              }))
+              .sort((a, z) => a.name.localeCompare(z.name)),
           };
         })}
         orders={orderRows.map((o) => ({

@@ -35,6 +35,9 @@ export async function POST(req: Request) {
     costNotes?: string;
     // Per-product unit-cost overrides for this batch's supplier order
     unitCosts?: { productId: string; unitCostCents: number }[];
+    // Inventory restock lines for this batch's supplier order.
+    // qty > 0 upserts the line; qty 0 removes it (unless already received).
+    stockLines?: { productId: string; qty: number }[];
   };
 
   const cents = (v: unknown): number | null => {
@@ -55,6 +58,24 @@ export async function POST(req: Request) {
           where: { batchId: b.batchId, status: "PAID" },
           data: { status: "READY_FOR_PICKUP" },
         });
+        // Receive restock lines: bump on-hand inventory exactly once per
+        // line (`received` guard — flipping the status back and forth
+        // can't double-count).
+        const lines = await prisma.batchStockLine.findMany({
+          where: { batchId: b.batchId, received: false },
+        });
+        for (const line of lines) {
+          await prisma.$transaction([
+            prisma.product.update({
+              where: { id: line.productId },
+              data: { inStock: { increment: line.qty } },
+            }),
+            prisma.batchStockLine.update({
+              where: { id: line.id },
+              data: { received: true },
+            }),
+          ]);
+        }
       }
       return NextResponse.json({ ok: true });
     }
@@ -78,7 +99,8 @@ export async function POST(req: Request) {
       if (typeof b.costNotes === "string") data.costNotes = b.costNotes.slice(0, 500) || null;
 
       const unitCosts = Array.isArray(b.unitCosts) ? b.unitCosts : null;
-      if (!Object.keys(data).length && !unitCosts) {
+      const stockLines = Array.isArray(b.stockLines) ? b.stockLines : null;
+      if (!Object.keys(data).length && !unitCosts && !stockLines) {
         return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
       }
       if (Object.keys(data).length) {
@@ -92,6 +114,30 @@ export async function POST(req: Request) {
             where: { batchId_productId: { batchId: b.batchId, productId: uc.productId } },
             create: { batchId: b.batchId, productId: uc.productId, unitCostCents: c },
             update: { unitCostCents: c },
+          });
+        }
+      }
+      if (stockLines) {
+        for (const sl of stockLines) {
+          if (typeof sl?.productId !== "string" || !sl.productId) continue;
+          const qty = Math.floor(Number(sl.qty));
+          if (!Number.isFinite(qty) || qty < 0) continue;
+          const where = { batchId_productId: { batchId: b.batchId, productId: sl.productId } };
+          if (qty === 0) {
+            // Remove the line — but never a received one (its units are
+            // already counted into inStock; deleting it would orphan the
+            // audit trail). Adjust inventory in the Stock panel instead.
+            await prisma.batchStockLine.deleteMany({
+              where: { batchId: b.batchId, productId: sl.productId, received: false },
+            });
+            continue;
+          }
+          const existing = await prisma.batchStockLine.findUnique({ where });
+          if (existing?.received) continue; // locked once received
+          await prisma.batchStockLine.upsert({
+            where,
+            create: { batchId: b.batchId, productId: sl.productId, qty },
+            update: { qty },
           });
         }
       }
