@@ -19,8 +19,8 @@ export default function ClubsPage() {
             <span className="text-volt">Your Sticks.</span>
           </h1>
           <p className="mt-4 max-w-xl text-paper/70">
-            We design and produce custom sticks for St. Louis area hockey clubs,
-            schools, and teams — your colors, your logo, the works. Placing a
+            We design and produce custom sticks for hockey clubs, schools, and
+            teams anywhere — your colors, your logo, the works. Placing a
             full stick order for the whole team? We got you. Want to mix and
             match minis and goalie sticks? No problem. Clubs run them as
             fundraisers and end-of-season gifts that actually get used.

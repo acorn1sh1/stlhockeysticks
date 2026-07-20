@@ -120,10 +120,10 @@ export default async function MiniSticksPage() {
             <span className="text-volt">Put your logo on a stick.</span>
           </h2>
           <p className="mt-2 max-w-xl text-paper/70">
-            We design custom mini sticks for STL-area clubs, schools, and teams
-            — your colors, your logo, delivered with the monthly batch. Tell us
-            who you are and we&apos;ll send a free mockup. Order 50+ minis (or
-            20+ full sticks) and we donate 10% back to your team.
+            We design custom mini sticks for clubs, schools, and teams — your
+            colors, your logo, delivered with the monthly batch. Tell us who you
+            are and we&apos;ll send a free mockup. Order 50+ and we donate 10%
+            back to your team.
           </p>
           <Link
             href="/clubs"
