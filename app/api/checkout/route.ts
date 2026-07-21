@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   if (clubLine) {
     const activeClubs = await getActiveClubs();
     const chosen = clubLine.options?.club;
-    if (!chosen || !activeClubs.includes(chosen)) {
+    if (!chosen || !activeClubs.some((c) => c.name === chosen)) {
       return NextResponse.json(
         { error: "Pick an available club for the club mini." },
         { status: 400 }

@@ -14,9 +14,11 @@ import { useCart } from "@/lib/cart";
 // rides along as `options.color` so it lands on the order line at checkout.
 // Empty (club/fun minis, or DB hiccup) = no picker, no options.
 //
-// `clubs` (custom club mini only): the active club list from the admin Clubs
-// panel. Non-empty = shopper must pick their club; rides as `options.club`.
-// Empty = no ready clubs yet, so the buy box shows a "coming soon" state.
+// `clubs` (custom club mini only): the active clubs (name + design image) from
+// the admin Clubs panel. Non-empty = shopper must pick their club; rides as
+// `options.club`. Empty = no ready clubs yet, so the buy box shows a "coming
+// soon" state. Picking a club shows its design image if one's uploaded.
+type ClubOption = { name: string; imageUrl: string | null };
 export default function MiniBuyBox({
   item,
   stock,
@@ -26,7 +28,7 @@ export default function MiniBuyBox({
   item: CatalogItem;
   stock?: number;
   colors?: string[];
-  clubs?: string[];
+  clubs?: ClubOption[];
 }) {
   const { add } = useCart();
   const [added, setAdded] = useState(false);
@@ -41,6 +43,7 @@ export default function MiniBuyBox({
   const isClubMini = item.category === "MINI_CLUB";
   const clubReady = !isClubMini || clubs.length > 0;
   const needsClub = isClubMini && !club;
+  const selectedClub = clubs.find((c) => c.name === club);
 
   const onAdd = () => {
     if (needsClub) return;
@@ -82,16 +85,28 @@ export default function MiniBuyBox({
             Choose your club
           </p>
           {clubReady ? (
-            <select
-              value={club}
-              onChange={(e) => setClub(e.target.value)}
-              className="mt-2 w-full rounded-lg border border-black/20 bg-white px-3 py-2 text-sm"
-            >
-              <option value="">Select a club…</option>
-              {clubs.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            <>
+              <select
+                value={club}
+                onChange={(e) => setClub(e.target.value)}
+                className="mt-2 w-full rounded-lg border border-black/20 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">Select a club…</option>
+                {clubs.map((c) => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+              {selectedClub?.imageUrl && (
+                <div className="mt-3 overflow-hidden rounded-xl border border-black/10">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedClub.imageUrl}
+                    alt={`${selectedClub.name} mini stick design`}
+                    className="h-48 w-full object-contain bg-black/5"
+                  />
+                </div>
+              )}
+            </>
           ) : (
             <p className="mt-2 rounded-lg bg-black/5 px-3 py-2 text-sm text-black/50">
               Club designs are coming soon. <a href="/clubs" className="font-bold underline">Request your club →</a>

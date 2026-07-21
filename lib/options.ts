@@ -156,18 +156,20 @@ export async function getStandardColors(category: string): Promise<string[]> {
   }
 }
 
-// Active club names for the customer "choose your club" picker on the custom
-// club mini. Admin manages these in the Clubs panel; only active (ready) clubs
-// are returned. [] on DB failure so the picker hides gracefully.
-export async function getActiveClubs(): Promise<string[]> {
+// Active clubs (name + design image) for the customer "choose your club"
+// picker on the custom club mini. Admin manages these in the Clubs panel;
+// only active (ready) clubs are returned. [] on DB failure so the picker
+// hides gracefully.
+export type ActiveClub = { name: string; imageUrl: string | null };
+export async function getActiveClubs(): Promise<ActiveClub[]> {
   try {
     const { prisma } = await import("./db");
     const rows = await prisma.club.findMany({
       where: { active: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { name: true },
+      select: { name: true, imageUrl: true },
     });
-    return rows.map((r: { name: string }) => r.name);
+    return rows.map((r: ActiveClub) => ({ name: r.name, imageUrl: r.imageUrl }));
   } catch (e) {
     console.error("getActiveClubs DB error", e);
     return [];

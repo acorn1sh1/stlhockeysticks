@@ -311,6 +311,7 @@ export default async function AdminPage() {
             id: c.id,
             name: c.name,
             active: c.active,
+            imageUrl: c.imageUrl,
             sortOrder: c.sortOrder,
           }))}
         />

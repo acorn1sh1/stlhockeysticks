@@ -32,10 +32,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // Club design image: a data URL (uploaded file) or http URL. Capped at
+    // ~4MB of characters so a base64 photo fits comfortably under the platform
+    // request limit; keep uploads web-sized.
+    const MAX_IMAGE_CHARS = 4_000_000;
+    const imageProvided = "imageUrl" in b;
+    const imageUrl =
+      b.imageUrl === null || b.imageUrl === ""
+        ? null
+        : typeof b.imageUrl === "string"
+          ? b.imageUrl.slice(0, MAX_IMAGE_CHARS)
+          : undefined;
+
     if (id) {
       const data: Record<string, unknown> = {};
       if (name) data.name = name;
       if (typeof b.active === "boolean") data.active = b.active;
+      if (imageProvided) data.imageUrl = imageUrl;
       if (b.sortOrder != null) data.sortOrder = Math.floor(Number(b.sortOrder));
       if (!Object.keys(data).length) {
         return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
@@ -48,7 +61,11 @@ export async function POST(req: Request) {
     const dupe = await prisma.club.findUnique({ where: { name } });
     if (dupe) return NextResponse.json({ error: "That club already exists." }, { status: 409 });
     await prisma.club.create({
-      data: { name, sortOrder: Math.floor(Number(b.sortOrder ?? 99)) || 99 },
+      data: {
+        name,
+        sortOrder: Math.floor(Number(b.sortOrder ?? 99)) || 99,
+        ...(imageUrl !== undefined ? { imageUrl } : {}),
+      },
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -7,6 +7,7 @@ export type ClubRow = {
   id: string;
   name: string;
   active: boolean;
+  imageUrl: string | null;
   sortOrder: number;
 };
 
@@ -15,6 +16,19 @@ async function post(body: unknown) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // keep uploads web-sized
+
+// Read an image File as a data URL (stored directly on the club, like the
+// warranty photos). Returns "" on failure.
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
   });
 }
 
@@ -57,6 +71,7 @@ export default function AdminClubs({ clubs }: { clubs: ClubRow[] }) {
         <table className="w-full text-sm">
           <thead className="border-b border-black/10 text-left text-xs uppercase text-black/40">
             <tr>
+              <th className="p-3">Design</th>
               <th className="p-3">Club</th>
               <th className="p-3">Shown to customers</th>
               <th className="p-3">Delete</th>
@@ -65,7 +80,7 @@ export default function AdminClubs({ clubs }: { clubs: ClubRow[] }) {
           <tbody>
             {clubs.length === 0 && (
               <tr>
-                <td colSpan={3} className="p-4 text-sm text-black/50">
+                <td colSpan={4} className="p-4 text-sm text-black/50">
                   No clubs yet — add one to start.
                 </td>
               </tr>
@@ -95,6 +110,23 @@ function Row({ row, onSaved }: { row: ClubRow; onSaved: () => void }) {
     else setError((await res.json().catch(() => ({})))?.error ?? "Failed");
   }
 
+  async function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError(`"${file.name}" is over 3MB — please pick a smaller image.`);
+      return;
+    }
+    setError("");
+    const dataUrl = await fileToDataUrl(file);
+    if (!dataUrl) {
+      setError("Couldn't read that image.");
+      return;
+    }
+    await save({ imageUrl: dataUrl });
+  }
+
   async function del() {
     setError("");
     setBusy(true);
@@ -114,6 +146,37 @@ function Row({ row, onSaved }: { row: ClubRow; onSaved: () => void }) {
 
   return (
     <tr className={`border-b border-black/5 last:border-0 ${row.active ? "" : "opacity-60"}`}>
+      <td className="p-3">
+        <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {row.imageUrl ? (
+            <img
+              src={row.imageUrl}
+              alt={`${row.name} design`}
+              className="h-12 w-12 shrink-0 rounded-lg border border-black/10 object-cover"
+            />
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-dashed border-black/20 text-[10px] text-black/30">
+              none
+            </div>
+          )}
+          <div className="flex flex-col gap-1">
+            <label className="cursor-pointer rounded-full border border-black/20 px-2 py-0.5 text-[11px] font-bold hover:bg-black/5">
+              {row.imageUrl ? "Replace" : "Upload"}
+              <input type="file" accept="image/*" onChange={onPickImage} className="hidden" disabled={busy} />
+            </label>
+            {row.imageUrl && (
+              <button
+                onClick={() => save({ imageUrl: null })}
+                disabled={busy}
+                className="text-[11px] font-bold text-red-600 hover:underline disabled:opacity-40"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+      </td>
       <td className="p-3">
         <div className="flex items-center gap-2">
           <input

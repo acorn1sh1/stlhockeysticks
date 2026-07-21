@@ -140,6 +140,7 @@ model Club {
   id        String   @id @default(cuid())
   name      String   @unique
   active    Boolean  @default(false) // ready — shown to customers
+  imageUrl  String?  // club design image — data URL (uploaded) or http URL; shown on the mini picker
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 }
