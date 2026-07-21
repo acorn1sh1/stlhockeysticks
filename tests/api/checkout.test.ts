@@ -102,12 +102,14 @@ describe("POST /api/checkout", () => {
     prismaMock.product.findMany.mockResolvedValue([
       product({ id: "prod_club", slug: "club-custom-mini-stick", name: "Club Custom Mini Stick", priceCents: 2799, category: "MINI_CLUB" }),
     ]);
+    // The club mini now requires a currently-active club.
+    prismaMock.club.findMany.mockResolvedValue([{ name: "Affton Americans" }]);
     prismaMock.order.create.mockResolvedValue({ id: "order_2" });
     prismaMock.order.update.mockResolvedValue({});
     okClover();
 
     const res = await POST(
-      jsonRequest({ email: "coach@club.com", name: "Coach K", lines: [{ slug: "club-custom-mini-stick", quantity: 50 }] })
+      jsonRequest({ email: "coach@club.com", name: "Coach K", lines: [{ slug: "club-custom-mini-stick", quantity: 50, options: { club: "Affton Americans" } }] })
     );
     expect(res.status).toBe(200);
     const orderArg = prismaMock.order.create.mock.calls[0][0].data;
@@ -125,6 +127,18 @@ describe("POST /api/checkout", () => {
       0
     );
     expect(cloverTotal).toBe(2799 * 50 - expectedDiscount);
+  });
+
+  it("rejects the club mini when the chosen club isn't active", async () => {
+    prismaMock.product.findMany.mockResolvedValue([
+      product({ id: "prod_club", slug: "club-custom-mini-stick", name: "Club Custom Mini Stick", priceCents: 3499, category: "MINI_CLUB", comingSoon: true }),
+    ]);
+    prismaMock.club.findMany.mockResolvedValue([{ name: "Affton Americans" }]);
+    const res = await POST(
+      jsonRequest({ email: "a@b.com", name: "A B", lines: [{ slug: "club-custom-mini-stick", quantity: 1, options: { club: "Nonexistent FC" } }] })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/available club/i);
   });
 
   it("rejects an invalid coupon at checkout (server re-validates)", async () => {

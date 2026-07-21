@@ -4,6 +4,8 @@ import MiniCard from "@/components/MiniCard";
 import BatchBanner from "@/components/BatchBanner";
 import { getStockMap } from "@/lib/inventory";
 import { getMergedCatalog } from "@/lib/products";
+import { getActiveClubs } from "@/lib/options";
+import { CLUB_STICK_SLUG } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +16,21 @@ export const metadata: Metadata = {
 };
 
 export default async function MiniSticksPage() {
-  const [stockMap, catalog] = await Promise.all([
+  const [stockMap, catalog, activeClubs] = await Promise.all([
     getStockMap(),
     getMergedCatalog(),
+    getActiveClubs(),
   ]);
 
   const plain = catalog.filter((c) => c.category === "MINI_PLAIN");
-  const clubs = catalog.filter((c) => c.category === "MINI_CLUB");
   const fun = catalog.filter((c) => c.category === "MINI_FUN");
+  // Single custom club mini now carries a "choose your club" picker (fed by
+  // the admin Clubs list) instead of one product per club. Prefer the
+  // canonical slug; fall back to any MINI_CLUB product.
+  const clubProduct =
+    catalog.find((c) => c.slug === CLUB_STICK_SLUG) ??
+    catalog.find((c) => c.category === "MINI_CLUB");
+  const clubsReady = activeClubs.length > 0;
   const stockOf = (slug: string) => stockMap[slug]?.inStock;
 
   return (
@@ -65,11 +74,13 @@ export default async function MiniSticksPage() {
         <div className="flex items-end justify-between">
           <div>
             <h2 className="text-2xl font-black tracking-tight">
-              Club Designs <span className="text-black/40">— Coming Soon</span>
+              Club Designs{" "}
+              {!clubsReady && <span className="text-black/40">— Coming Soon</span>}
             </h2>
             <p className="mt-1 text-black/60">
-              One mini per club, in your colors — $34.99 when they land. Designs
-              drop as clubs sign off.
+              {clubsReady
+                ? "Your club's colors on an 18\" knee-hockey legend — $34.99, pre-order now. Pick your club on the next page."
+                : "One mini per club, in your colors — $34.99 when they land. Designs drop as clubs sign off."}
             </p>
           </div>
           <Link
@@ -80,11 +91,14 @@ export default async function MiniSticksPage() {
           </Link>
         </div>
 
-        {clubs.length > 0 ? (
+        {clubProduct ? (
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {clubs.map((item) => (
-              <MiniCard key={item.slug} item={item} stock={stockOf(item.slug)} />
-            ))}
+            <MiniCard
+              // When clubs are ready the card is openable (detail page has the
+              // club picker); otherwise it stays a coming-soon teaser.
+              item={{ ...clubProduct, comingSoon: !clubsReady }}
+              stock={stockOf(clubProduct.slug)}
+            />
           </div>
         ) : (
           <p className="mt-6 text-black/50">

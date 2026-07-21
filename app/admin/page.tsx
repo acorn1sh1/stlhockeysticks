@@ -5,6 +5,7 @@ import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminProducts from "@/components/admin/AdminProducts";
 import AdminOptions from "@/components/admin/AdminOptions";
 import AdminCategories from "@/components/admin/AdminCategories";
+import AdminClubs from "@/components/admin/AdminClubs";
 import AdminSizingTiers from "@/components/admin/AdminSizingTiers";
 import AdminAttributeKinds from "@/components/admin/AdminAttributeKinds";
 import AdminCoupons from "@/components/admin/AdminCoupons";
@@ -47,6 +48,7 @@ export default async function AdminPage() {
   const categoryRows = await prisma.category.findMany({ orderBy: { sortOrder: "asc" } });
   const sizingTierRows = await prisma.sizingTier.findMany({ orderBy: { sortOrder: "asc" } });
   const attributeKindRows = await prisma.attributeKind.findMany({ orderBy: { sortOrder: "asc" } });
+  const clubRows = await prisma.club.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
 
   const batchRows = await prisma.batch.findMany({
     orderBy: { cutoffDate: "desc" },
@@ -231,11 +233,7 @@ export default async function AdminPage() {
         }))}
         categories={categoryRows.map((c) => ({ key: c.key, label: c.label }))}
         sizingTiers={sizingTierRows.map((t) => ({ key: t.key, label: t.label }))}
-        clubs={[...new Set(
-          allProducts
-            .filter((p) => p.category.includes("CLUB") && p.clubName)
-            .map((p) => p.clubName as string)
-        )].sort()}
+        clubs={clubRows.map((c) => c.name)}
         options={optionValues
           .filter((o) => o.active)
           .map((o) => ({
@@ -306,6 +304,14 @@ export default async function AdminPage() {
             label: c.label,
             sortOrder: c.sortOrder,
             active: c.active,
+          }))}
+        />
+        <AdminClubs
+          clubs={clubRows.map((c) => ({
+            id: c.id,
+            name: c.name,
+            active: c.active,
+            sortOrder: c.sortOrder,
           }))}
         />
         <AdminSizingTiers

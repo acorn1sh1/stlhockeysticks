@@ -132,6 +132,18 @@ model Category {
   createdAt DateTime @default(now())
 }
 
+// Admin-editable club catalog. Drives the "choose your club" picker on the
+// custom club mini (customer preorder) and the club field in the admin
+// in-stock SKU builder. `active` = "ready" — admin can select any club, but
+// customers only see active ones (matches the old per-club "coming soon").
+model Club {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(false) // ready — shown to customers
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
 // Admin-editable sizing tier catalog (Senior/Int/Jr/Youth). Scopes FLEX and
 // LENGTH OptionValue rows and Product.sizingTier. Note: the dedicated
 // marketing pages at /sticks/{tier} are still literal Next.js routes (one

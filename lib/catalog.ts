@@ -357,6 +357,7 @@ export type SelectedOptions = {
   curve?: string;
   hand?: string;
   color?: string;
+  club?: string; // customer-chosen club on the custom club mini
   length?: string;
   kick?: string;
   customName?: string;
@@ -407,6 +408,7 @@ export function optionsSummary(sel?: SelectedOptions) {
     sel.kick && `${sel.kick} kick`,
     sel.paddleSize && `${sel.paddleSize} paddle`,
     sel.color && sel.color !== "Black" ? sel.color : null,
+    sel.club,
     sel.customName?.trim() ? `"${sel.customName.trim()}"` : null,
   ].filter(Boolean);
   return parts.join(" · ");

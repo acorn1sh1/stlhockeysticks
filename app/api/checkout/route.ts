@@ -6,13 +6,14 @@ import { validateCoupon } from "@/lib/coupons";
 import {
   batchDiscountCents,
   CATALOG,
+  CLUB_STICK_SLUG,
   clubDiscountCents,
   optionsSummary,
   unitPriceCents,
   validateOptions,
   type SelectedOptions,
 } from "@/lib/catalog";
-import { withDbOptions } from "@/lib/options";
+import { withDbOptions, getActiveClubs } from "@/lib/options";
 import { clientKey, consumeRateLimit } from "@/lib/rateLimit";
 
 // Creates a Clover Hosted Checkout session.
@@ -41,12 +42,30 @@ export async function POST(req: Request) {
   }
 
   const slugs = [...new Set(body.lines.map((l) => l.slug))];
-  // comingSoon products are visible teasers only — never purchasable.
-  const products = await prisma.product.findMany({
-    where: { slug: { in: slugs }, active: true, comingSoon: false },
-  });
+  // comingSoon products are visible teasers only — never purchasable. Exception:
+  // the custom club mini, whose readiness is gated per-club (active Clubs), not
+  // by the product's own comingSoon flag — its club selection is validated below.
+  const products = (
+    await prisma.product.findMany({
+      where: { slug: { in: slugs }, active: true },
+    })
+  ).filter((p) => !p.comingSoon || p.slug === CLUB_STICK_SLUG);
   if (products.length !== slugs.length) {
     return NextResponse.json({ error: "Unknown product in cart" }, { status: 400 });
+  }
+
+  // The custom club mini must carry a currently-active club. Blocks stale carts
+  // (a club retired between add-to-cart and checkout) and hand-crafted requests.
+  const clubLine = body.lines.find((l) => l.slug === CLUB_STICK_SLUG);
+  if (clubLine) {
+    const activeClubs = await getActiveClubs();
+    const chosen = clubLine.options?.club;
+    if (!chosen || !activeClubs.includes(chosen)) {
+      return NextResponse.json(
+        { error: "Pick an available club for the club mini." },
+        { status: 400 }
+      );
+    }
   }
 
   // Validate options + compute unit prices (DB base price + catalog upcharges)

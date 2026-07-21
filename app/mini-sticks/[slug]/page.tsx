@@ -6,7 +6,7 @@ import MiniBuyBox from "@/components/MiniBuyBox";
 import StickPhoto from "@/components/StickPhoto";
 import { getMergedItem } from "@/lib/products";
 import { getStockMap } from "@/lib/inventory";
-import { getStandardColors } from "@/lib/options";
+import { getStandardColors, getActiveClubs } from "@/lib/options";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +33,18 @@ export default async function MiniStickDetail({
     getStockMap(),
   ]);
   // Only mini products live here; full sticks use /sticks/[slug].
-  // Coming-soon teasers aren't openable (cards don't link here anyway).
-  if (!item || !MINI_CATEGORIES.has(item.category) || item.comingSoon) notFound();
+  // Coming-soon teasers aren't openable — except the custom club mini, which
+  // is always openable and self-gates on whether any club is ready (the buy
+  // box shows "coming soon" when the active-club list is empty).
+  const isClubMini = item?.category === "MINI_CLUB";
+  if (!item || !MINI_CATEGORIES.has(item.category) || (item.comingSoon && !isClubMini)) notFound();
 
   // Plain minis: shopper picks one of the standard colors (admin-editable
-  // COLOR rows). Club/Fun minis have a fixed design — no picker.
+  // COLOR rows). Club minis: shopper picks their club (active Club rows).
+  // Fun minis have a fixed design — no picker.
   const colors =
     item.category === "MINI_PLAIN" ? await getStandardColors(item.category) : [];
+  const clubs = isClubMini ? await getActiveClubs() : [];
 
   const stock = stockMap[slug]?.inStock;
   const accent = item.accent ?? "#18181b";
@@ -84,7 +89,7 @@ export default async function MiniStickDetail({
           </div>
 
           <div className="flex flex-col gap-4">
-            <MiniBuyBox item={item} stock={stock} colors={colors} />
+            <MiniBuyBox item={item} stock={stock} colors={colors} clubs={clubs} />
             <div className="rounded-2xl border border-black/10 bg-white p-6 text-sm text-black/60">
               <p className="font-bold text-ink">Local pickup only</p>
               <p className="mt-1">

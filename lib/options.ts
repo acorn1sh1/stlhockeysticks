@@ -156,6 +156,24 @@ export async function getStandardColors(category: string): Promise<string[]> {
   }
 }
 
+// Active club names for the customer "choose your club" picker on the custom
+// club mini. Admin manages these in the Clubs panel; only active (ready) clubs
+// are returned. [] on DB failure so the picker hides gracefully.
+export async function getActiveClubs(): Promise<string[]> {
+  try {
+    const { prisma } = await import("./db");
+    const rows = await prisma.club.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { name: true },
+    });
+    return rows.map((r: { name: string }) => r.name);
+  } catch (e) {
+    console.error("getActiveClubs DB error", e);
+    return [];
+  }
+}
+
 // Merge DB-sourced options onto a pre-order catalog item. Returns the item
 // unchanged if it isn't configurable, or if the DB yields no usable options.
 export async function withDbOptions(item: CatalogItem): Promise<CatalogItem> {
