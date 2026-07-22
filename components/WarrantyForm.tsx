@@ -83,7 +83,7 @@ export default function WarrantyForm() {
     return (
       <div className="mt-4 rounded-xl bg-volt/20 p-4 text-sm font-semibold">
         Claim received. We&apos;ll review your photos and email you within a couple
-        business days about a replacement or refund.
+        business days about your replacement stick.
       </div>
     );
 
@@ -123,7 +123,11 @@ export default function WarrantyForm() {
 
       <div>
         <label className="mb-1 block font-bold" htmlFor="photos">
-          Photos of the broken stick <span className="font-normal text-black/50">(required, up to {MAX_PHOTOS})</span>
+          Photos of the broken stick{" "}
+          <span className="font-normal text-black/50">
+            (required, up to {MAX_PHOTOS} — include the break and the manufacturing
+            info printed on the shaft)
+          </span>
         </label>
         <input
           id="photos"

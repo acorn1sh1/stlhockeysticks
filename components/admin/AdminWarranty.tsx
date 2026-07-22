@@ -15,7 +15,9 @@ export type WarrantyRow = {
   photos: { mimeType: string; dataBase64: string }[];
 };
 
-const STATUSES = ["SUBMITTED", "APPROVED", "DENIED", "REPLACED", "REFUNDED"];
+// Policy: replacement only, never a refund. REFUNDED still exists in the Prisma
+// enum for legacy rows but is intentionally not selectable here.
+const STATUSES = ["SUBMITTED", "APPROVED", "DENIED", "REPLACED"];
 
 function fmtDate(s: string) {
   return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });

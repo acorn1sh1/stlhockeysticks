@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin";
 
-const STATUSES = ["SUBMITTED", "APPROVED", "DENIED", "REPLACED", "REFUNDED"];
+// Policy: replacement only, never a refund. REFUNDED remains in the Prisma enum
+// for legacy rows but can no longer be set.
+const STATUSES = ["SUBMITTED", "APPROVED", "DENIED", "REPLACED"];
 
 // Update a warranty claim's status / notes.
 export async function POST(req: Request) {

@@ -18,7 +18,7 @@ export default function WarrantyPage() {
           <p className="mt-4 max-w-xl text-paper/70">
             Manufacturing defects and breakage are covered for 30 days from
             purchase. File your claim online with a couple photos and your order
-            number — we&apos;ll sort out a replacement or refund.
+            number — approved claims get a replacement stick.
           </p>
         </div>
       </section>
@@ -38,7 +38,11 @@ export default function WarrantyPage() {
               </li>
               <li className="flex gap-3">
                 <span className="font-black text-volt-dark">✓</span>
-                <span>Replacement from batch stock or a refund, our call based on the photos.</span>
+                <span>
+                  <strong>Replacement only — we don&apos;t issue refunds.</strong> If your
+                  stick is in stock we ship it right away; otherwise it goes on the next
+                  batch order.
+                </span>
               </li>
             </ul>
 
@@ -46,7 +50,7 @@ export default function WarrantyPage() {
             <ol className="mt-5 space-y-4 text-sm">
               {[
                 ["Your order number", "It's in your order confirmation email. We verify every claim against the original order."],
-                ["Photos of the break", "Clear shots of the damage — required. Up to 5 images (JPG, PNG, WEBP, or HEIC)."],
+                ["Photos of the break — and the markings", "Clear shots of the damage, plus a photo of the manufacturing info printed on the shaft. Both are required. Up to 5 images (JPG, PNG, WEBP, or HEIC)."],
                 ["A quick description", "How it broke and when you noticed. The more detail, the faster we can approve."],
               ].map(([t, d], i) => (
                 <li key={t} className="flex gap-3">
