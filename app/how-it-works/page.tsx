@@ -23,7 +23,7 @@ const faqs = [
   },
   {
     q: "What if a stick is defective or breaks?",
-    a: "Every stick is covered for 30 days from purchase. If one breaks or fails, file a claim on our Warranty page with your order number and photos of the break plus the manufacturing info on the shaft. Approved claims get a replacement stick — from stock if we have it, otherwise on the next batch. We don't issue refunds. No hassle, no interrogation.",
+    a: "Every stick is covered for 30 days from purchase. If one breaks or fails, file a claim on our Warranty page with your order number and photos of the break plus the manufacturing info on the shaft. Approved claims get a replacement stick — from stock if we have it, otherwise on the next batch. No hassle, no interrogation.",
   },
   {
     q: "Do I need an account?",

@@ -39,9 +39,8 @@ export default function WarrantyPage() {
               <li className="flex gap-3">
                 <span className="font-black text-volt-dark">✓</span>
                 <span>
-                  <strong>Replacement only — we don&apos;t issue refunds.</strong> If your
-                  stick is in stock we ship it right away; otherwise it goes on the next
-                  batch order.
+                  <strong>We replace it.</strong> If your stick is in stock it&apos;s ready
+                  right away; otherwise it goes on the next batch order.
                 </span>
               </li>
             </ul>
