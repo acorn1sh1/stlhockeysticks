@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { clientKey, consumeRateLimit } from "@/lib/rateLimit";
+import { looksLikeOrderId, parseOrderNumber } from "@/lib/orderNumber";
 
 const WARRANTY_DAYS = 30;
 const MAX_PHOTOS = 5;
@@ -74,16 +75,30 @@ export async function POST(req: Request) {
   }
 
   // Verify the order exists and belongs to this customer.
+  //
+  // `orderId` here is whatever the customer typed. Accept the human order
+  // number ("STL-1042", "1042", mangled dashes and all) as the primary form,
+  // and still accept a raw cuid so claims on orders placed before order
+  // numbers existed — and anyone pasting from an old link — keep working.
   let order;
   try {
-    order = await prisma.order.findUnique({ where: { id: orderId } });
+    const num = parseOrderNumber(orderId);
+    order =
+      num != null
+        ? await prisma.order.findUnique({ where: { orderNumber: num } })
+        : looksLikeOrderId(orderId)
+          ? await prisma.order.findUnique({ where: { id: orderId } })
+          : null;
   } catch (e) {
     console.error("warranty order lookup error", e);
     return NextResponse.json({ error: "Database unavailable." }, { status: 500 });
   }
   if (!order || order.email.toLowerCase() !== email) {
     return NextResponse.json(
-      { error: "We couldn't match that order number and email. Double-check both." },
+      {
+        error:
+          "We couldn't match that order number and email. Your order number looks like STL-1042 and is in your confirmation email.",
+      },
       { status: 404 }
     );
   }

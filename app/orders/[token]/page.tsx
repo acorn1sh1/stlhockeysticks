@@ -1,6 +1,7 @@
 import { fmtPrice, optionsSummary, type SelectedOptions } from "@/lib/catalog";
 import { prisma } from "@/lib/db";
 import { lineOutstanding, isFullyPickedUp } from "@/lib/pickup";
+import { formatOrderNumber } from "@/lib/orderNumber";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -70,7 +71,7 @@ export default async function OrderStatusPage({
     <div className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="text-3xl font-black">Your order</h1>
       <p className="mt-1 text-sm text-black/50">
-        Placed {fmtDate(order.createdAt)} · #{order.id.slice(0, 8).toUpperCase()}
+        Placed {fmtDate(order.createdAt)} · {formatOrderNumber(order.orderNumber)}
       </p>
 
       <div className="mt-6 rounded-2xl border border-black/10 bg-white p-6">

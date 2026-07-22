@@ -92,7 +92,8 @@ export default function WarrantyForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block font-bold" htmlFor="orderId">Order number</label>
-          <input id="orderId" name="orderId" required className="w-full rounded-lg border border-black/20 px-3 py-2" placeholder="From your confirmation email" />
+          <input id="orderId" name="orderId" required className="w-full rounded-lg border border-black/20 px-3 py-2" placeholder="STL-1042" />
+          <p className="mt-1 text-xs text-black/40">In your confirmation email and on your order status page.</p>
         </div>
         <div>
           <label className="mb-1 block font-bold" htmlFor="email">Email on the order</label>

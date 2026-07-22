@@ -192,6 +192,7 @@ export type OutstandingLine = {
 
 export type OutstandingOrder = {
   id: string;
+  orderNumber: number;
   name: string;
   email: string;
   phone: string | null;
@@ -248,6 +249,7 @@ export async function getOutstandingPickups(now: Date = new Date()): Promise<Out
 
       return {
         id: o.id,
+        orderNumber: o.orderNumber,
         name: o.name,
         email: o.email,
         phone: o.phone,

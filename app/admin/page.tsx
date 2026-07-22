@@ -309,7 +309,7 @@ export default async function AdminPage() {
     take: 30,
     include: {
       lines: { select: { qty: true } },
-      order: { select: { name: true } },
+      order: { select: { name: true, orderNumber: true } },
     },
   });
 
@@ -361,6 +361,7 @@ export default async function AdminPage() {
         })}
         orders={orderRows.map((o) => ({
           id: o.id,
+          orderNumber: o.orderNumber,
           name: o.name,
           email: o.email,
           status: o.status,
@@ -555,6 +556,7 @@ export default async function AdminPage() {
       recent={pickupEventRows.map((e) => ({
         id: e.id,
         orderId: e.orderId,
+        orderNumber: e.order?.orderNumber ?? 0,
         customer: e.order?.name ?? "",
         pickedUpBy: e.pickedUpBy,
         note: e.note,

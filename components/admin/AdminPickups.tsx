@@ -1,6 +1,7 @@
 "use client";
 
 import { fmtPrice, optionsSummary, type SelectedOptions } from "@/lib/catalog";
+import { formatOrderNumber } from "@/lib/orderNumber";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -16,6 +17,7 @@ export type PickupLineRow = {
 
 export type PickupOrderRow = {
   id: string;
+  orderNumber: number;
   name: string;
   email: string;
   phone: string | null;
@@ -34,6 +36,7 @@ export type PickupOrderRow = {
 export type RecentPickupRow = {
   id: string;
   orderId: string;
+  orderNumber: number;
   customer: string;
   pickedUpBy: string;
   note: string | null;
@@ -81,6 +84,10 @@ export default function AdminPickups({
         o.name.toLowerCase().includes(needle) ||
         o.email.toLowerCase().includes(needle) ||
         (o.phone ?? "").includes(needle) ||
+        // Match the order number with or without the STL- prefix, so both
+        // "stl-1042" and "1042" find it.
+        formatOrderNumber(o.orderNumber).toLowerCase().includes(needle) ||
+        String(o.orderNumber).includes(needle) ||
         o.id.toLowerCase().startsWith(needle)
       );
     });
@@ -220,7 +227,9 @@ export default function AdminPickups({
                 <td className="p-3 whitespace-nowrap">{fmtDate(r.createdAt)}</td>
                 <td className="p-3">
                   {r.customer}
-                  <span className="ml-2 text-xs text-black/40">{r.orderId.slice(0, 8)}…</span>
+                  <span className="ml-2 font-mono text-xs text-black/40">
+                    {formatOrderNumber(r.orderNumber)}
+                  </span>
                 </td>
                 <td className="p-3">{r.pickedUpBy}</td>
                 <td className="p-3 text-right tabular-nums">{r.units}</td>
@@ -290,7 +299,12 @@ function PickupCard({ order }: { order: PickupOrderRow }) {
     <div className="rounded-2xl border border-black/10 bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="font-bold">{order.name}</div>
+          <div className="font-bold">
+            {order.name}
+            <span className="ml-2 font-mono text-xs font-normal text-black/40">
+              {formatOrderNumber(order.orderNumber)}
+            </span>
+          </div>
           <div className="text-xs text-black/50">
             {order.email}
             {order.phone ? ` · ${order.phone}` : ""} · ordered {fmtDate(order.createdAt)}

@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { sendEmail } from "./email";
 import { ensureLookupToken, orderLookupUrl, lineOutstanding } from "./pickup";
+import { formatOrderNumber } from "./orderNumber";
 
 // Customer-facing transactional email for the pickup lifecycle:
 //   paid            -> "we've got your order" + status link
@@ -66,17 +67,19 @@ export async function sendOrderConfirmation(orderId: string): Promise<boolean> {
   const token = await ensureLookupToken(order.id);
   const url = orderLookupUrl(token);
   const first = escapeHtml((order.name ?? "").split(" ")[0] ?? "");
-
   const timing = order.batch
     ? `<p>These are pre-ordered in the <strong>${escapeHtml(order.batch.name)}</strong>. Expected pickup window: <strong>${fmtDate(order.batch.pickupStart)} – ${fmtDate(order.batch.pickupEnd)}</strong>. We'll email you the moment they land.</p>`
     : `<p>These are in stock and ready whenever you are.</p>`;
 
+  const num = formatOrderNumber(order.orderNumber);
+
   return sendEmail({
     to: order.email,
-    subject: "Order confirmed — STL Hockey Sticks",
+    subject: `Order ${num} confirmed — STL Hockey Sticks`,
     html: shell(
       `<h2>Thanks${first ? `, ${first}` : ""}!</h2>
-<p>We've got your order.</p>
+<p>We've got your order. Your order number is <strong>${num}</strong> — you'll
+need it if you ever file a warranty claim, so keep this email.</p>
 ${itemList(order.items)}
 ${timing}
 <p>Pickup: ${escapeHtml(pickupAddress())}</p>
@@ -111,12 +114,14 @@ export async function sendReadyForPickup(orderId: string): Promise<boolean> {
     ? `<p>Pickup window: <strong>${fmtDate(order.batch.pickupStart)} – ${fmtDate(order.batch.pickupEnd)}</strong>.</p>`
     : "";
 
+  const num = formatOrderNumber(order.orderNumber);
+
   const ok = await sendEmail({
     to: order.email,
-    subject: "Your sticks are ready for pickup",
+    subject: `Your sticks are ready for pickup — ${num}`,
     html: shell(
       `<h2>They're here${first ? `, ${first}` : ""}!</h2>
-<p>Ready to collect:</p>
+<p>Order <strong>${num}</strong> — ready to collect:</p>
 ${itemList(order.items, { outstandingOnly: true })}
 ${window}
 <p>Pickup: ${escapeHtml(pickupAddress())}</p>

@@ -252,6 +252,12 @@ model ProductOption {
 
 model Order {
   id            String   @id @default(cuid())
+  // Human-facing order number, shown as "STL-1042" (see lib/orderNumber.ts).
+  // The cuid `id` stays the internal key; customers should never be asked to
+  // read one aloud or type it into the warranty form. Postgres sequence
+  // handles concurrency; prisma/backfill-order-numbers.mjs seeds it above the
+  // max after backfilling existing rows oldest-first.
+  orderNumber   Int      @unique @default(autoincrement())
   email         String
   name          String
   phone         String?

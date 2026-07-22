@@ -1,6 +1,7 @@
 "use client";
 
 import { fmtPrice } from "@/lib/catalog";
+import { formatOrderNumber } from "@/lib/orderNumber";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -45,6 +46,7 @@ type BatchStockLineRow = {
 };
 type OrderRow = {
   id: string;
+  orderNumber: number;
   name: string;
   email: string;
   status: string;
@@ -185,6 +187,7 @@ export default function AdminDashboard({
           <thead className="border-b border-black/10 text-left text-xs uppercase text-black/40">
             <tr>
               <th className="p-3">Date</th>
+              <th className="p-3">Order</th>
               <th className="p-3">Customer</th>
               <th className="p-3">Status</th>
               <th className="p-3">Batch</th>
@@ -194,12 +197,15 @@ export default function AdminDashboard({
           <tbody>
             {orders.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-4 text-black/50">No orders yet.</td>
+                <td colSpan={6} className="p-4 text-black/50">No orders yet.</td>
               </tr>
             )}
             {orders.map((o) => (
               <tr key={o.id} className="border-b border-black/5 last:border-0">
                 <td className="p-3 text-black/60">{fmtDate(o.createdAt)}</td>
+                <td className="p-3 font-mono text-xs text-black/60">
+                  {formatOrderNumber(o.orderNumber)}
+                </td>
                 <td className="p-3">
                   <div className="font-semibold">{o.name}</div>
                   <div className="text-xs text-black/40">{o.email}</div>
