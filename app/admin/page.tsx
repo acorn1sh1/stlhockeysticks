@@ -14,6 +14,8 @@ import AdminInquiries from "@/components/admin/AdminInquiries";
 import AdminCustomers from "@/components/admin/AdminCustomers";
 import AdminBroadcast from "@/components/admin/AdminBroadcast";
 import AdminTabs from "@/components/admin/AdminTabs";
+import AdminFees from "@/components/admin/AdminFees";
+import { getFeeSettings } from "@/lib/fees";
 import AdminAccounting, { type MonthlyRow } from "@/components/admin/AdminAccounting";
 import { REVENUE_STATUSES } from "@/lib/accounting";
 
@@ -250,6 +252,24 @@ export default async function AdminPage() {
 
   const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: "desc" } });
 
+  // ---- Clover processing fees ----
+  const feeSettings = await getFeeSettings();
+  const feeExpenses = await prisma.expense.findMany({
+    where: { category: "FEES" },
+    select: { amountCents: true, date: true, reconcileKey: true },
+  });
+  const feeMonthMap = new Map<string, { accruedCents: number; adjustmentCents: number }>();
+  for (const f of feeExpenses) {
+    const key = f.date.toISOString().slice(0, 7);
+    const row = feeMonthMap.get(key) ?? { accruedCents: 0, adjustmentCents: 0 };
+    if (f.reconcileKey) row.adjustmentCents += f.amountCents;
+    else row.accruedCents += f.amountCents;
+    feeMonthMap.set(key, row);
+  }
+  const feeMonths = [...feeMonthMap.entries()]
+    .map(([month, v]) => ({ month, ...v }))
+    .sort((a, b) => b.month.localeCompare(a.month));
+
   // Custom-stick inquiries (clubs/schools/teams) + general contact messages.
   const inquiryRows = await prisma.clubInquiry.findMany({
     orderBy: { createdAt: "desc" },
@@ -345,6 +365,11 @@ export default async function AdminPage() {
             batchName: e.batch?.name ?? null,
           }))}
           batches={batchRows.map((b) => ({ id: b.id, name: b.name }))}
+        />
+        <AdminFees
+          percent={feeSettings.percent}
+          fixedCents={feeSettings.fixedCents}
+          months={feeMonths}
         />
         <AdminCoupons
           coupons={coupons.map((c) => ({

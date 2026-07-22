@@ -70,7 +70,23 @@ model Expense {
   amountCents Int
   batchId     String?
   batch       Batch?   @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  // Payment-processing fee accrued for a single paid order. Unique so a
+  // repeated webhook can never double-post the same order's fee. Plain id
+  // (no FK) so deleting an order never blocks the books.
+  orderId     String?  @unique
+  // Monthly Clover statement reconciliation adjustment, e.g. "clover-fee-2026-07".
+  // Unique so re-running a month's reconcile updates rather than duplicates.
+  reconcileKey String? @unique
   createdAt   DateTime @default(now())
+}
+
+// Generic admin-editable key/value settings (fee rates, etc.) so operational
+// numbers can change without a deploy.
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 enum BatchStatus {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { decrementForOrder } from "@/lib/inventory";
 import { verifyCloverSignature } from "@/lib/cloverWebhook";
 import { pushPaidOrder } from "@/lib/cornishCore";
+import { accrueOrderFee } from "@/lib/fees";
 
 // Clover webhook receiver.
 // Configure in Clover dashboard -> webhooks, point at
@@ -73,6 +74,9 @@ export async function POST(req: Request) {
         } catch (e) {
           console.error("stock decrement error", pending.id, e);
         }
+        // Accrue the estimated Clover processing fee into the ledger so batch
+        // margin/P&L reflect it immediately. Idempotent + never throws.
+        await accrueOrderFee(pending.id);
         // Mirror the paid order up to cornish-core (the shared books).
         // Best-effort: pushPaidOrder swallows its own errors.
         await pushPaidOrder(pending.id);
