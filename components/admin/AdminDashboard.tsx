@@ -97,25 +97,11 @@ export default function AdminDashboard({
   const [addingStock, setAddingStock] = useState(false);
   const [addingBatch, setAddingBatch] = useState(false);
 
-  async function signOut() {
-    await fetch("/api/admin/login", { method: "DELETE" });
-    router.refresh();
-  }
-
+  // Header + sign-out live in AdminTabs (the shell) so they persist across tabs.
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-black">Shop Admin</h1>
-        <button
-          onClick={signOut}
-          className="rounded-full border border-black/20 px-4 py-2 text-sm font-bold hover:bg-black/5"
-        >
-          Sign out
-        </button>
-      </div>
-
+    <div>
       {/* INVENTORY */}
-      <div className="mt-10 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <h2 className="text-xl font-black">In-Stock Inventory</h2>
         <button
           onClick={() => setAddingStock((v) => !v)}

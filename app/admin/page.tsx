@@ -13,6 +13,7 @@ import AdminWarranty from "@/components/admin/AdminWarranty";
 import AdminInquiries from "@/components/admin/AdminInquiries";
 import AdminCustomers from "@/components/admin/AdminCustomers";
 import AdminBroadcast from "@/components/admin/AdminBroadcast";
+import AdminTabs from "@/components/admin/AdminTabs";
 import AdminAccounting, { type MonthlyRow } from "@/components/admin/AdminAccounting";
 import { REVENUE_STATUSES } from "@/lib/accounting";
 
@@ -265,9 +266,10 @@ export default async function AdminPage() {
     include: { photos: { select: { mimeType: true, dataBase64: true } } },
   });
 
-  return (
-    <div className="space-y-12 pb-16">
-      <AdminDashboard
+  // Grouped into tabs so /admin isn't one endless scroll. Order roughly
+  // matches day-to-day use: operations first, then catalog, customers, money.
+  const dashboardTab = (
+    <AdminDashboard
         stock={stockProducts}
         batches={batchRows.map((b) => {
           const overrides = new Map(b.unitCosts.map((u) => [u.productId, u.unitCostCents]));
@@ -327,8 +329,10 @@ export default async function AdminPage() {
             category: o.category,
           }))}
       />
+  );
 
-      <div className="mx-auto max-w-5xl space-y-12 px-4">
+  const financeTab = (
+    <>
         <AdminAccounting
           monthly={monthly}
           expenses={expenseRows.map((e) => ({
@@ -342,6 +346,26 @@ export default async function AdminPage() {
           }))}
           batches={batchRows.map((b) => ({ id: b.id, name: b.name }))}
         />
+        <AdminCoupons
+          coupons={coupons.map((c) => ({
+            id: c.id,
+            code: c.code,
+            kind: c.kind,
+            value: c.value,
+            tiers: (c.tiers as { minQty: number; percent: number }[] | null) ?? null,
+            active: c.active,
+            minSubtotalCents: c.minSubtotalCents,
+            maxRedemptions: c.maxRedemptions,
+            timesRedeemed: c.timesRedeemed,
+            startsAt: c.startsAt ? c.startsAt.toISOString() : null,
+            expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
+          }))}
+        />
+    </>
+  );
+
+  const catalogTab = (
+    <>
         <AdminProducts
           products={allProducts.map((p) => ({
             id: p.id,
@@ -435,21 +459,11 @@ export default async function AdminPage() {
           sizings={["ALL", ...sizingTierRows.filter((t) => t.active).map((t) => t.key)]}
           categories={["ALL", ...categoryRows.filter((c) => c.active).map((c) => c.key)]}
         />
-        <AdminCoupons
-          coupons={coupons.map((c) => ({
-            id: c.id,
-            code: c.code,
-            kind: c.kind,
-            value: c.value,
-            tiers: (c.tiers as { minQty: number; percent: number }[] | null) ?? null,
-            active: c.active,
-            minSubtotalCents: c.minSubtotalCents,
-            maxRedemptions: c.maxRedemptions,
-            timesRedeemed: c.timesRedeemed,
-            startsAt: c.startsAt ? c.startsAt.toISOString() : null,
-            expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
-          }))}
-        />
+    </>
+  );
+
+  const customersTab = (
+    <>
         <AdminCustomers customers={customers} />
         <AdminBroadcast batches={batchRows.map((b) => ({ id: b.id, name: b.name }))} />
         <AdminInquiries
@@ -472,20 +486,36 @@ export default async function AdminPage() {
             createdAt: m.createdAt.toISOString(),
           }))}
         />
-        <AdminWarranty
-          claims={claims.map((c) => ({
-            id: c.id,
-            orderId: c.orderId,
-            name: c.name,
-            email: c.email,
-            productName: c.productName,
-            description: c.description,
-            status: c.status,
-            createdAt: c.createdAt.toISOString(),
-            photos: c.photos,
-          }))}
-        />
-      </div>
+    </>
+  );
+
+  const warrantyTab = (
+    <AdminWarranty
+      claims={claims.map((c) => ({
+        id: c.id,
+        orderId: c.orderId,
+        name: c.name,
+        email: c.email,
+        productName: c.productName,
+        description: c.description,
+        status: c.status,
+        createdAt: c.createdAt.toISOString(),
+        photos: c.photos,
+      }))}
+    />
+  );
+
+  return (
+    <div className="pb-16">
+      <AdminTabs
+        tabs={[
+          { id: "dashboard", label: "Dashboard", content: dashboardTab },
+          { id: "catalog", label: "Catalog", content: catalogTab },
+          { id: "customers", label: "Customers", content: customersTab },
+          { id: "finance", label: "Money", content: financeTab },
+          { id: "warranty", label: "Warranty", content: warrantyTab },
+        ]}
+      />
     </div>
   );
 }
