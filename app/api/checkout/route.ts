@@ -34,6 +34,7 @@ export async function POST(req: Request) {
     name?: string;
     phone?: string;
     couponCode?: string;
+    marketingOptIn?: boolean;
     lines?: { slug: string; quantity: number; options?: SelectedOptions }[];
   } | null;
 
@@ -163,6 +164,7 @@ export async function POST(req: Request) {
       email: body.email,
       name: body.name,
       phone: body.phone,
+      marketingOptIn: body.marketingOptIn === true,
       batchId: openBatch?.id ?? null,
       subtotalCents,
       discountCents,
@@ -179,6 +181,19 @@ export async function POST(req: Request) {
       },
     },
   });
+
+  // Ensure a marketing contact record exists (create-only — never resets a
+  // prior unsubscribe). Gives every customer a stable unsubscribe token.
+  // Consent itself is tracked on the order's marketingOptIn.
+  try {
+    await prisma.emailContact.upsert({
+      where: { email: body.email },
+      create: { email: body.email },
+      update: {},
+    });
+  } catch (e) {
+    console.error("emailContact upsert failed (non-fatal)", e);
+  }
 
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const [firstName, ...rest] = body.name.split(" ");

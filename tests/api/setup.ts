@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
     coupon: { findUnique: vi.fn(), update: vi.fn() },
     batch: { updateMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
     club: { findMany: vi.fn() },
+    emailContact: { upsert: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     warrantyClaim: { create: vi.fn() },
     clubInquiry: { create: vi.fn() },
     $transaction: vi.fn(),
@@ -37,6 +38,7 @@ beforeEach(() => {
   // Safe defaults; individual tests override as needed.
   prismaMock.$transaction.mockImplementation(async (ops: unknown[]) => ops);
   prismaMock.club.findMany.mockResolvedValue([]);
+  prismaMock.emailContact.upsert.mockResolvedValue({});
   sendEmailMock.mockResolvedValue(undefined);
 });
 

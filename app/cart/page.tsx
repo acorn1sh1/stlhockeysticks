@@ -31,7 +31,7 @@ export default function CartPage() {
         .sort((a, b) => a.minQty - b.minQty)
         .find((t) => t.minQty > stickQty && t.percent > batchPct)
     : undefined;
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", marketingOptIn: false });
   const [state, setState] = useState<"idle" | "sending" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -160,10 +160,25 @@ export default function CartPage() {
       </div>
 
       <div className="mt-4 rounded-xl bg-volt/20 p-4 text-sm">
-        <strong>Local pickup — free.</strong> Custom sticks arrive with the
-        monthly batch (pickup around{" "}
-        {batch.pickupStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-        ). We&apos;ll email you when your order is ready.
+        <p className="font-bold">This is a batch pre-order — here&apos;s the timeline:</p>
+        <ul className="mt-2 space-y-1">
+          <li>
+            <strong>Order placed with our factory:</strong>{" "}
+            {batch.cutoff.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}{" "}
+            (the batch cutoff)
+          </li>
+          <li>
+            <strong>Estimated ready for pickup:</strong> about 6 weeks later, around{" "}
+            {batch.pickupStart.toLocaleDateString("en-US", { month: "long", day: "numeric" })}
+          </li>
+          <li>
+            <strong>Local St. Louis pickup — free.</strong> No shipping.
+          </li>
+        </ul>
+        <p className="mt-2">
+          We&apos;ll <strong>email you</strong> the moment your sticks are ready for
+          pickup — please double-check your email below.
+        </p>
       </div>
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -177,13 +192,19 @@ export default function CartPage() {
             className="w-full rounded-lg border border-black/20 px-3 py-2"
           />
           <input
-            aria-label="Email"
-            placeholder="Email"
+            aria-label="Email (required — for pickup updates)"
+            placeholder="Email (required — we email you for pickup)"
             type="email"
+            required
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             className="w-full rounded-lg border border-black/20 px-3 py-2"
           />
+          {form.email.length > 0 && !/\S+@\S+\.\S+/.test(form.email) && (
+            <p className="text-xs font-semibold text-red-600">
+              Enter a valid email so we can reach you for pickup.
+            </p>
+          )}
           <input
             aria-label="Phone (optional)"
             placeholder="Phone (optional)"
@@ -191,6 +212,18 @@ export default function CartPage() {
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
             className="w-full rounded-lg border border-black/20 px-3 py-2"
           />
+          <label className="flex items-start gap-2 pt-1 text-sm text-black/60">
+            <input
+              type="checkbox"
+              checked={form.marketingOptIn}
+              onChange={(e) => setForm({ ...form, marketingOptIn: e.target.checked })}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              Email me about new drops, club designs, and deals. (Optional — order
+              and pickup updates are sent either way. Unsubscribe anytime.)
+            </span>
+          </label>
         </div>
         <div className="flex flex-col justify-end">
           <div className="flex justify-between text-lg">

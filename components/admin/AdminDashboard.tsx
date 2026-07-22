@@ -886,6 +886,79 @@ function BatchDetailEditor({ row, stock, onSaved }: { row: BatchRow; stock: Stoc
         </button>
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
+
+      <div className="sm:col-span-4">
+        <BatchEmail batchId={row.id} />
+      </div>
+    </div>
+  );
+}
+
+// Email everyone in a batch (e.g. "your sticks are ready"). Sends one message
+// per customer via the /api/admin/batch/email route.
+function BatchEmail({ batchId }: { batchId: string }) {
+  const [open, setOpen] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState("");
+
+  async function send() {
+    if (!confirm("Send this email to everyone in the batch?")) return;
+    setBusy(true);
+    setResult("");
+    const res = await post("/api/admin/batch/email", { batchId, subject, message });
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (res.ok) {
+      setResult(`Sent to ${data.sent}/${data.total}.${data.failed?.length ? ` Failed: ${data.failed.join(", ")}` : ""}`);
+      setSubject("");
+      setMessage("");
+    } else {
+      setResult(data?.error ?? "Send failed");
+    }
+  }
+
+  return (
+    <div className="mt-2 border-t border-black/10 pt-3">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs font-bold uppercase text-black/40 hover:text-ink"
+      >
+        {open ? "▾" : "▸"} Email everyone in this batch
+      </button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Subject — e.g. Your sticks are ready for pickup!"
+            className="w-full rounded-lg border border-black/20 px-3 py-2 text-sm"
+          />
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={5}
+            placeholder="Message… (plain text; we add a greeting with the customer's first name)"
+            className="w-full rounded-lg border border-black/20 px-3 py-2 text-sm"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={send}
+              disabled={busy || !subject.trim() || !message.trim()}
+              className="rounded-full bg-ink px-5 py-2 text-sm font-bold text-paper hover:bg-ink/80 disabled:opacity-40"
+            >
+              {busy ? "Sending..." : "Send to batch"}
+            </button>
+            {result && <span className="text-sm text-black/60">{result}</span>}
+          </div>
+          <p className="text-xs text-black/40">
+            Goes to everyone with a paid/active order in this batch (each gets
+            their own email — addresses stay private). Excludes cancelled and
+            never-paid orders.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

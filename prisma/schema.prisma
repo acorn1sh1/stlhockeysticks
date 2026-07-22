@@ -132,6 +132,19 @@ model Category {
   createdAt DateTime @default(now())
 }
 
+// Marketing email contact + unsubscribe state, keyed by email. A row is
+// created (with a stable unsubscribe token) the first time we see an email at
+// checkout or a broadcast. `unsubscribed` gates ALL marketing sends. Kept
+// separate from Order so unsubscribe survives across orders and guests.
+model EmailContact {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  unsubscribed Boolean  @default(false)
+  unsubToken   String   @unique @default(cuid()) // used in the unsubscribe link
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 // Admin-editable club catalog. Drives the "choose your club" picker on the
 // custom club mini (customer preorder) and the club field in the admin
 // in-stock SKU builder. `active` = "ready" — admin can select any club, but
@@ -231,6 +244,7 @@ model Order {
   coupon        Coupon?  @relation(fields: [couponId], references: [id])
   couponCode    String? // denormalized code for display/history
   couponDiscountCents Int @default(0) // coupon savings already netted into subtotalCents
+  marketingOptIn Boolean @default(false) // explicit consent to marketing email, captured at checkout
   status        OrderStatus @default(PENDING_PAYMENT)
   cloverCheckoutId String? @unique
   cloverPaymentId  String?

@@ -11,6 +11,8 @@ import AdminAttributeKinds from "@/components/admin/AdminAttributeKinds";
 import AdminCoupons from "@/components/admin/AdminCoupons";
 import AdminWarranty from "@/components/admin/AdminWarranty";
 import AdminInquiries from "@/components/admin/AdminInquiries";
+import AdminCustomers from "@/components/admin/AdminCustomers";
+import AdminBroadcast from "@/components/admin/AdminBroadcast";
 import AdminAccounting, { type MonthlyRow } from "@/components/admin/AdminAccounting";
 import { REVENUE_STATUSES } from "@/lib/accounting";
 
@@ -150,6 +152,87 @@ export default async function AdminPage() {
     take: 20,
     include: { batch: { select: { name: true } } },
   });
+
+  // ---- Customer list (CRM) ----
+  // Derived from orders, deduped by email. No separate table — always current.
+  const customerOrders = await prisma.order.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      email: true,
+      name: true,
+      phone: true,
+      subtotalCents: true,
+      status: true,
+      marketingOptIn: true,
+      createdAt: true,
+      batch: { select: { name: true } },
+    },
+  });
+  const emailContacts = await prisma.emailContact.findMany({
+    select: { email: true, unsubscribed: true },
+  });
+  const unsubscribedSet = new Set(
+    emailContacts
+      .filter((c: { email: string; unsubscribed: boolean }) => c.unsubscribed)
+      .map((c: { email: string; unsubscribed: boolean }) => c.email.toLowerCase())
+  );
+  const customerMap = new Map<
+    string,
+    {
+      email: string;
+      name: string;
+      phone: string | null;
+      orders: number;
+      paidOrders: number;
+      spentCents: number;
+      firstOrderAt: string;
+      lastOrderAt: string;
+      batches: Set<string>;
+      optedIn: boolean;
+    }
+  >();
+  for (const o of customerOrders) {
+    const email = (o.email ?? "").trim();
+    if (!email) continue;
+    const key = email.toLowerCase();
+    const iso = o.createdAt.toISOString();
+    const isRevenue = (REVENUE_STATUSES as readonly string[]).includes(o.status);
+    const existing = customerMap.get(key);
+    if (!existing) {
+      customerMap.set(key, {
+        email,
+        name: o.name ?? "",
+        phone: o.phone ?? null,
+        orders: 1,
+        paidOrders: isRevenue ? 1 : 0,
+        spentCents: isRevenue ? o.subtotalCents : 0,
+        firstOrderAt: iso,
+        lastOrderAt: iso,
+        batches: new Set(o.batch?.name ? [o.batch.name] : []),
+        optedIn: o.marketingOptIn,
+      });
+    } else {
+      existing.orders += 1;
+      if (isRevenue) {
+        existing.paidOrders += 1;
+        existing.spentCents += o.subtotalCents;
+      }
+      if (iso < existing.firstOrderAt) existing.firstOrderAt = iso;
+      if (iso > existing.lastOrderAt) existing.lastOrderAt = iso;
+      if (o.phone && !existing.phone) existing.phone = o.phone;
+      if (o.batch?.name) existing.batches.add(o.batch.name);
+      if (o.marketingOptIn) existing.optedIn = true;
+    }
+  }
+  const customers = [...customerMap.values()]
+    .map((c) => ({
+      ...c,
+      batches: [...c.batches].sort(),
+      // Marketing-eligible = opted in on some order AND not unsubscribed.
+      marketing: c.optedIn && !unsubscribedSet.has(c.email.toLowerCase()),
+      unsubscribed: unsubscribedSet.has(c.email.toLowerCase()),
+    }))
+    .sort((a, b) => b.lastOrderAt.localeCompare(a.lastOrderAt));
 
   const optionValues = await prisma.optionValue.findMany({
     orderBy: [{ kind: "asc" }, { sizing: "asc" }, { sortOrder: "asc" }],
@@ -367,6 +450,8 @@ export default async function AdminPage() {
             expiresAt: c.expiresAt ? c.expiresAt.toISOString() : null,
           }))}
         />
+        <AdminCustomers customers={customers} />
+        <AdminBroadcast batches={batchRows.map((b) => ({ id: b.id, name: b.name }))} />
         <AdminInquiries
           inquiries={inquiryRows.map((q) => ({
             id: q.id,

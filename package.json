@@ -8,6 +8,7 @@
     "start": "next start",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
+    "deploy": "bash scripts/deploy-prod.sh",
     "db:seed": "node prisma/seed.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run --project unit --project api",
