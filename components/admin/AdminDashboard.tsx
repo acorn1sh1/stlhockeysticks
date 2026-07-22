@@ -4,7 +4,16 @@ import { fmtPrice } from "@/lib/catalog";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type StockRow = { id: string; slug: string; name: string; inStock: number; priceCents: number };
+type StockRow = {
+  id: string;
+  slug: string;
+  name: string;
+  inStock: number;
+  priceCents: number;
+  // Paid for but not yet collected — physically here, not sellable.
+  // Display only; see the Pickups tab to act on it.
+  reserved: number;
+};
 type BatchProduct = {
   productId: string;
   name: string;
@@ -111,8 +120,10 @@ export default function AdminDashboard({
         </button>
       </div>
       <p className="mt-1 text-sm text-black/50">
-        On-hand counts for ships-now SKUs. At 0 the storefront shows the item as
-        pre-order into the next batch. Counts drop automatically when an order is paid.
+        Free-to-sell counts for ships-now SKUs. At 0 the storefront shows the
+        item as pre-order into the next batch. Counts drop automatically when an
+        order is paid — units already sold but not yet collected show as
+        &ldquo;awaiting pickup&rdquo; and are tracked in the Pickups tab.
       </p>
 
       {addingStock && (
@@ -305,7 +316,14 @@ function StockEditor({ row, onSaved }: { row: StockRow; onSaved: () => void }) {
           onChange={(e) => setName(e.target.value)}
           className="rounded-lg border border-black/20 px-2 py-1 font-bold"
         />
-        <div className="mt-1 text-xs text-black/40">{row.slug}</div>
+        <div className="mt-1 text-xs text-black/40">
+          {row.slug}
+          {row.reserved > 0 && (
+            <span className="ml-2 text-amber-700">
+              +{row.reserved} awaiting pickup ({row.inStock + row.reserved} on hand)
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <span className="text-black/40">$</span>

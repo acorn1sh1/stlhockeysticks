@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createHostedCheckout } from "@/lib/clover";
 import { getOrCreateOpenBatch } from "@/lib/batch";
 import { validateCoupon } from "@/lib/coupons";
+import { generateLookupToken } from "@/lib/pickup";
 import {
   batchDiscountCents,
   CATALOG,
@@ -171,6 +172,9 @@ export async function POST(req: Request) {
       couponId,
       couponCode,
       couponDiscountCents,
+      // Guest-checkout status link (/orders/[token]). Minted up front so the
+      // confirmation email always has one.
+      lookupToken: generateLookupToken(),
       items: {
         create: lines.map((l) => ({
           productId: l.product.id,

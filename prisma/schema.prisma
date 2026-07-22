@@ -264,10 +264,28 @@ model Order {
   status        OrderStatus @default(PENDING_PAYMENT)
   cloverCheckoutId String? @unique
   cloverPaymentId  String?
+  // Set only when EVERY line is fully collected (see lib/pickup.ts).
+  // Partial pickups live on OrderItem.qtyPickedUp / PickupEvent.
   pickedUpAt    DateTime?
+  // Free-text name of whoever took the last handoff — often a parent or
+  // coach, not the buyer. Full per-handoff history is in PickupEvent.
+  pickedUpBy    String?
+  pickupNote    String?
+  pickupEvents  PickupEvent[]
+  // Unsigned random secret for the guest order-status page
+  // (/orders/[token]). Guest checkout means there's no login to gate on;
+  // the token IS the credential, so it's high-entropy and never displayed
+  // anywhere but the customer's own email. Nullable for pre-existing rows —
+  // lib/pickup.ts backfills lazily.
+  lookupToken   String?  @unique
+  // Timestamps for the pickup-reminder ladder, so a nudge is never sent twice.
+  readyEmailAt  DateTime?
+  lastReminderAt DateTime?
   warrantyClaims WarrantyClaim[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([status])
 }
 
 // Promo / discount codes managed from /admin and applied at checkout.
@@ -314,6 +332,41 @@ model OrderItem {
   quantity   Int
   priceCents Int // unit price at purchase time (incl. option upcharges)
   options    Json? // { flex, curve, hand, color, customName }
+  // Units of this line actually handed to the customer. 0 <= qtyPickedUp
+  // <= quantity, enforced in lib/pickup.ts. quantity - qtyPickedUp is the
+  // "reserved" count: physically on the shelf but already spoken for.
+  qtyPickedUp Int    @default(0)
+  pickupLines PickupEventLine[]
+
+  @@index([orderId])
+}
+
+// One physical handoff: customer (or their parent/coach) walks away with
+// some units. Append-only audit trail — corrections are made by recording a
+// negative-qty event rather than editing history, so the ledger always
+// reconciles against OrderItem.qtyPickedUp.
+model PickupEvent {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  pickedUpBy String // who physically took them
+  note       String?
+  createdAt  DateTime @default(now())
+  lines      PickupEventLine[]
+
+  @@index([orderId])
+}
+
+model PickupEventLine {
+  id          String      @id @default(cuid())
+  eventId     String
+  event       PickupEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  orderItemId String
+  orderItem   OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  qty         Int // negative = correction/return of a mis-recorded handoff
+
+  @@index([eventId])
+  @@index([orderItemId])
 }
 
 model ClubInquiry {

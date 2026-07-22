@@ -18,6 +18,10 @@ export default function SuccessPage() {
         Payment received. You&apos;ll get an email confirmation now, and another
         when your sticks are ready for pickup in St. Louis.
       </p>
+      <p className="mt-3 text-sm text-black/50">
+        That confirmation has a private link to your order status — hang onto it
+        and you can check on your sticks any time, no account needed.
+      </p>
       <Link
         href="/"
         className="mt-8 inline-block rounded-full bg-ink px-7 py-3 font-bold text-paper hover:bg-ink/80"

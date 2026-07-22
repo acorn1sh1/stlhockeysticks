@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { isAdmin } from "@/lib/admin";
+import { sendBatchReadyEmails } from "@/lib/orderEmail";
 
 const VALID = ["OPEN", "ORDERED", "ARRIVED", "CLOSED"] as const;
 type BatchStatus = (typeof VALID)[number];
@@ -75,6 +76,17 @@ export async function POST(req: Request) {
               data: { received: true },
             }),
           ]);
+        }
+      }
+      // Tell customers their sticks landed. Only orders that haven't already
+      // been emailed for this batch get one, so flipping ARRIVED → ORDERED →
+      // ARRIVED can't re-spam. Never blocks the status change.
+      if (b.status === "ARRIVED") {
+        try {
+          const mail = await sendBatchReadyEmails(b.batchId);
+          return NextResponse.json({ ok: true, mail });
+        } catch (e) {
+          console.error("batch ready emails failed", b.batchId, e);
         }
       }
       return NextResponse.json({ ok: true });

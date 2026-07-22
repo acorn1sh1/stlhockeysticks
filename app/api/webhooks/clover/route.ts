@@ -4,6 +4,7 @@ import { decrementForOrder } from "@/lib/inventory";
 import { verifyCloverSignature } from "@/lib/cloverWebhook";
 import { pushPaidOrder } from "@/lib/cornishCore";
 import { accrueOrderFee } from "@/lib/fees";
+import { sendOrderConfirmation } from "@/lib/orderEmail";
 
 // Clover webhook receiver.
 // Configure in Clover dashboard -> webhooks, point at
@@ -77,6 +78,13 @@ export async function POST(req: Request) {
         // Accrue the estimated Clover processing fee into the ledger so batch
         // margin/P&L reflect it immediately. Idempotent + never throws.
         await accrueOrderFee(pending.id);
+        // Order confirmation + guest status link. Best-effort: a mail failure
+        // must not make Clover retry a payment we've already booked.
+        try {
+          await sendOrderConfirmation(pending.id);
+        } catch (e) {
+          console.error("order confirmation email failed", pending.id, e);
+        }
         // Mirror the paid order up to cornish-core (the shared books).
         // Best-effort: pushPaidOrder swallows its own errors.
         await pushPaidOrder(pending.id);

@@ -17,7 +17,9 @@ import AdminTabs from "@/components/admin/AdminTabs";
 import AdminFees from "@/components/admin/AdminFees";
 import { getFeeSettings } from "@/lib/fees";
 import AdminAccounting, { type MonthlyRow } from "@/components/admin/AdminAccounting";
+import AdminPickups from "@/components/admin/AdminPickups";
 import { REVENUE_STATUSES } from "@/lib/accounting";
+import { getOutstandingPickups, getReservedMap } from "@/lib/pickup";
 
 export const dynamic = "force-dynamic";
 
@@ -280,6 +282,37 @@ export default async function AdminPage() {
     take: 100,
   });
 
+  // ---- Pickups ----
+  // Outstanding = paid for, still physically on our shelf. Reserved counts
+  // come from the same lines, so the two panels can never disagree.
+  const outstandingPickups = await getOutstandingPickups();
+  const reservedMap = await getReservedMap();
+  const pickupProducts = await prisma.product.findMany({
+    where: {
+      OR: [
+        { inStock: { gt: 0 } },
+        { id: { in: Object.keys(reservedMap) } },
+      ],
+    },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, inStock: true, preorder: true },
+  });
+  const reservedRows = pickupProducts.map((p) => ({
+    productId: p.id,
+    name: p.name,
+    free: p.inStock,
+    reserved: reservedMap[p.id] ?? 0,
+    preorder: p.preorder,
+  }));
+  const pickupEventRows = await prisma.pickupEvent.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 30,
+    include: {
+      lines: { select: { qty: true } },
+      order: { select: { name: true } },
+    },
+  });
+
   const claims = await prisma.warrantyClaim.findMany({
     orderBy: { createdAt: "desc" },
     take: 30,
@@ -290,7 +323,7 @@ export default async function AdminPage() {
   // matches day-to-day use: operations first, then catalog, customers, money.
   const dashboardTab = (
     <AdminDashboard
-        stock={stockProducts}
+        stock={stockProducts.map((p) => ({ ...p, reserved: reservedMap[p.id] ?? 0 }))}
         batches={batchRows.map((b) => {
           const overrides = new Map(b.unitCosts.map((u) => [u.productId, u.unitCostCents]));
           const products = [...(batchProducts.get(b.id) ?? new Map()).entries()].map(
@@ -514,6 +547,22 @@ export default async function AdminPage() {
     </>
   );
 
+  const pickupsTab = (
+    <AdminPickups
+      orders={outstandingPickups}
+      reserved={reservedRows}
+      recent={pickupEventRows.map((e) => ({
+        id: e.id,
+        orderId: e.orderId,
+        customer: e.order?.name ?? "",
+        pickedUpBy: e.pickedUpBy,
+        note: e.note,
+        createdAt: e.createdAt.toISOString(),
+        units: e.lines.reduce((s, l) => s + l.qty, 0),
+      }))}
+    />
+  );
+
   const warrantyTab = (
     <AdminWarranty
       claims={claims.map((c) => ({
@@ -535,6 +584,13 @@ export default async function AdminPage() {
       <AdminTabs
         tabs={[
           { id: "dashboard", label: "Dashboard", content: dashboardTab },
+          {
+            id: "pickups",
+            label: outstandingPickups.length
+              ? `Pickups (${outstandingPickups.length})`
+              : "Pickups",
+            content: pickupsTab,
+          },
           { id: "catalog", label: "Catalog", content: catalogTab },
           { id: "customers", label: "Customers", content: customersTab },
           { id: "finance", label: "Money", content: financeTab },
