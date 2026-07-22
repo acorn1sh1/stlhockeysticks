@@ -121,6 +121,11 @@ model Product {
   fixedHand   String?
   fixedColor  String?
   fixedLength String?
+  // Goalie sticks are sized by paddle, not length — they have no LENGTH
+  // options at all (see lib/options.ts). Separate column rather than
+  // overloading fixedLength so the supplier export and the storefront can
+  // tell "60in shaft" apart from "26in paddle".
+  fixedPaddle String?
   orderItems  OrderItem[]
   batchUnitCosts BatchUnitCost[]
   batchStockLines BatchStockLine[] // restock lines on supplier orders

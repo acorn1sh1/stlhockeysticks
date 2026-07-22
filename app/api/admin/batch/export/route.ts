@@ -109,7 +109,9 @@ export async function GET(req: Request) {
       curve: dash(p.fixedCurve),
       hand: dash(p.fixedHand),
       color: dash(p.fixedColor),
-      length: dash(p.fixedLength),
+      // Goalie SKUs carry a paddle size instead of a length — without this
+      // fallback a goalie restock line exports a blank size column.
+      length: dash(p.fixedLength ?? p.fixedPaddle),
     };
     const key = [`${p.name} (RESTOCK)`, p.category, row.flex, row.curve, row.hand, row.color, row.length].join("|");
     const existing = agg.get(key);

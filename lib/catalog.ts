@@ -44,6 +44,7 @@ export type CatalogItem = {
     hand?: string;
     color?: string;
     length?: string;
+    paddle?: string; // goalie only — sized by paddle, never by length
   };
   // On-hand unit count (Product.inStock) for IN_STOCK SKUs — used for the
   // "only X left" cue and availability sort/filter. Undefined otherwise.

@@ -84,6 +84,7 @@ export async function POST(req: Request) {
   if (typeof b.fixedHand === "string") data.fixedHand = b.fixedHand || null;
   if (typeof b.fixedColor === "string") data.fixedColor = b.fixedColor || null;
   if (typeof b.fixedLength === "string") data.fixedLength = b.fixedLength || null;
+  if (typeof b.fixedPaddle === "string") data.fixedPaddle = b.fixedPaddle || null;
 
   try {
     if (existing) {
@@ -124,6 +125,7 @@ export async function POST(req: Request) {
           fixedHand: (data.fixedHand as string | null) ?? null,
           fixedColor: (data.fixedColor as string | null) ?? null,
           fixedLength: (data.fixedLength as string | null) ?? null,
+          fixedPaddle: (data.fixedPaddle as string | null) ?? null,
         },
       });
     }

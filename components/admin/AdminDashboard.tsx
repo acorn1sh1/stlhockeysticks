@@ -388,6 +388,7 @@ function AddStockSku({
     color: "",
     club: "",
     length: "",
+    paddle: "",
     price: "",
     inStock: "0",
     nameOverride: "",
@@ -404,6 +405,7 @@ function AddStockSku({
       if (k === "tier" || k === "category") {
         next.flex = "";
         next.length = "";
+        next.paddle = "";
       }
       return next;
     });
@@ -426,6 +428,10 @@ function AddStockSku({
   const hands = valuesFor("HAND");
   const colors = valuesFor("COLOR");
   const lengths = valuesFor("LENGTH");
+  // Goalie builds are sized by paddle instead of length. Driven by the option
+  // catalog, not a hardcoded category check — add PADDLE values scoped to any
+  // category and the picker appears there too.
+  const paddles = valuesFor("PADDLE");
 
   const catLabel = categories.find((c) => c.key === f.category)?.label ?? f.category;
   const tierLabel = sizingTiers.find((t) => t.key === f.tier)?.label ?? "";
@@ -440,16 +446,31 @@ function AddStockSku({
     f.curve,
     f.hand,
     colorPart,
+    f.paddle,
   ]
     .filter(Boolean)
     .join(" ");
   const name = f.nameOverride.trim() || autoName;
-  const slug = ["instock", f.tier || f.category, f.flex, f.curve, f.hand, colorPart, f.length]
+  // Paddle belongs in the slug: without it two goalie SKUs that differ only by
+  // paddle size collide on the same slug and the second one fails to save.
+  const slug = [
+    "instock",
+    f.tier || f.category,
+    f.flex,
+    f.curve,
+    f.hand,
+    colorPart,
+    f.length,
+    f.paddle,
+  ]
     .filter(Boolean)
     .join("-")
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/-+/g, "-")
+    // Sizes end in a quote mark (60", 26") which the sanitizer turns into a
+    // trailing dash — strip it so slugs don't end mid-word.
+    .replace(/^-|-$/g, "");
 
   async function submit() {
     setBusy(true);
@@ -472,6 +493,7 @@ function AddStockSku({
       // build spec / supplier export; regular sticks use the paint color.
       fixedColor: colorPart,
       fixedLength: f.length,
+      fixedPaddle: f.paddle,
     });
     setBusy(false);
     if (res.ok) onDone();
@@ -546,6 +568,7 @@ function AddStockSku({
         <Picker field="color" label="Color" opts={colors} optional />
       )}
       <Picker field="length" label="Length" opts={lengths} optional />
+      {paddles.length > 0 && <Picker field="paddle" label="Paddle" opts={paddles} />}
       <label className="text-sm">
         <span className={lbl}>Price (USD)</span>
         <input type="number" step="0.01" min="0" placeholder="0.00" value={f.price} onChange={(e) => set("price", e.target.value)} className={`${sel} w-full text-right`} />

@@ -447,6 +447,7 @@ export default async function AdminPage() {
             fixedHand: p.fixedHand,
             fixedColor: p.fixedColor,
             fixedLength: p.fixedLength,
+            fixedPaddle: p.fixedPaddle,
             hasOrders: p._count.orderItems > 0,
           }))}
           categories={categoryRows.map((c) => c.key)}

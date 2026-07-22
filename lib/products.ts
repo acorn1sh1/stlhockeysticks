@@ -53,6 +53,7 @@ export async function getMergedCatalog(): Promise<CatalogItem[]> {
               hand: db.fixedHand ?? undefined,
               color: db.fixedColor ?? undefined,
               length: db.fixedLength ?? undefined,
+              paddle: db.fixedPaddle ?? undefined,
             }
           : undefined,
       stockCount: db.type === "IN_STOCK" ? db.inStock : undefined,

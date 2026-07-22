@@ -40,6 +40,7 @@ export type ProductRow = {
   fixedHand: string | null;
   fixedColor: string | null;
   fixedLength: string | null;
+  fixedPaddle: string | null;
   hasOrders: boolean;
 };
 
@@ -365,6 +366,7 @@ function ProductDetailEditor({
     fixedHand: row.fixedHand ?? "",
     fixedColor: row.fixedColor ?? "",
     fixedLength: row.fixedLength ?? "",
+    fixedPaddle: row.fixedPaddle ?? "",
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -391,6 +393,7 @@ function ProductDetailEditor({
       fixedHand: f.fixedHand,
       fixedColor: f.fixedColor,
       fixedLength: f.fixedLength,
+      fixedPaddle: f.fixedPaddle,
     });
     setBusy(false);
     if (res.ok) onSaved();
@@ -499,6 +502,10 @@ function ProductDetailEditor({
           <label className="text-sm">
             <span className="mb-1 block text-xs text-black/40">Length</span>
             <input value={f.fixedLength} onChange={(e) => set("fixedLength", e.target.value)} className="w-full rounded-lg border border-black/20 px-2 py-1 text-sm" />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-xs text-black/40">Paddle (goalie)</span>
+            <input value={f.fixedPaddle} onChange={(e) => set("fixedPaddle", e.target.value)} className="w-full rounded-lg border border-black/20 px-2 py-1 text-sm" />
           </label>
         </div>
       )}

@@ -83,7 +83,7 @@ export async function GET(req: Request) {
       const p = item.product;
       const line: Line = {
         name: supplierName(p),
-        length: numOrBlank(String(o.length ?? o.paddleSize ?? p.fixedLength ?? "")),
+        length: numOrBlank(String(o.length ?? o.paddleSize ?? p.fixedLength ?? p.fixedPaddle ?? "")),
         model: String(o.curve ?? p.fixedCurve ?? ""),
         flex: numOrBlank(String(o.flex ?? p.fixedFlex ?? "")),
         hand: String(o.hand ?? p.fixedHand ?? "Right"),
@@ -110,7 +110,8 @@ export async function GET(req: Request) {
     const p = sl.product;
     const line: Line = {
       name: supplierName(p),
-      length: numOrBlank(String(p.fixedLength ?? "")),
+      // Goalie restock lines are sized by paddle, not length.
+      length: numOrBlank(String(p.fixedLength ?? p.fixedPaddle ?? "")),
       model: String(p.fixedCurve ?? ""),
       flex: numOrBlank(String(p.fixedFlex ?? "")),
       hand: String(p.fixedHand ?? "Right"),
