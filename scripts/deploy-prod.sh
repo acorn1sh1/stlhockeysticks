@@ -19,8 +19,14 @@ WHERE NOT EXISTS (SELECT 1 FROM "_app_identity");
 SQL
 }
 
+# --accept-data-loss is required because the `_app_identity` sentinel table
+# (recreated below) is never in the Prisma schema, so every push wants to drop
+# it and would otherwise stop on an interactive "ignore data loss?" prompt. The
+# only "loss" is that 1-row marker. CAVEAT: this also auto-accepts a genuinely
+# destructive schema change (dropped column/table with data) without asking —
+# review `prisma migrate diff` before deploying anything that removes a field.
 echo "▶ 1/5  Dev DB push (.env → acela) + sentinel"
-npx prisma db push
+npx prisma db push --accept-data-loss
 npx prisma db execute --schema prisma/schema.prisma --stdin <<<"$(SENTINEL_SQL development)"
 
 echo "▶ 2/5  Typecheck + tests"
@@ -34,7 +40,7 @@ case "$PROD_DB" in
   *mainline*) : ;;
   *) echo "✗ PROD_DB is not the mainline (prod) host — aborting:"; echo "  $(printf '%s' "$PROD_DB" | sed 's/:[^:@]*@/:****@/')"; exit 1 ;;
 esac
-DATABASE_URL="$PROD_DB" npx prisma db push
+DATABASE_URL="$PROD_DB" npx prisma db push --accept-data-loss
 DATABASE_URL="$PROD_DB" npx prisma db execute --schema prisma/schema.prisma --stdin <<<"$(SENTINEL_SQL production)"
 
 echo "▶ 4/5  Git push"
