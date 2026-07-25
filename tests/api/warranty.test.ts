@@ -5,7 +5,8 @@ import { POST } from "@/app/api/warranty/route";
 const photo = { mimeType: "image/jpeg", dataBase64: "aGVsbG8gd29ybGQ=" };
 
 const baseClaim = {
-  orderId: "order_1",
+  // Customers now enter the human order number (STL-1042), not the cuid.
+  orderId: "STL-1042",
   email: "buyer@example.com",
   name: "Buyer One",
   productName: "Elite Senior Stick",
@@ -14,7 +15,13 @@ const baseClaim = {
 };
 
 function eligibleOrder(over: Partial<Record<string, unknown>> = {}) {
-  return { id: "order_1", email: "buyer@example.com", status: "PAID", ...over };
+  return {
+    id: "order_1",
+    orderNumber: 1042,
+    email: "buyer@example.com",
+    status: "PAID",
+    ...over,
+  };
 }
 
 describe("POST /api/warranty", () => {
@@ -99,5 +106,29 @@ describe("POST /api/warranty", () => {
     prismaMock.order.findUnique.mockRejectedValue(new Error("db down"));
     const res = await POST(jsonRequest(baseClaim));
     expect(res.status).toBe(500);
+  });
+
+  it("looks up by order number, not the raw id", async () => {
+    prismaMock.order.findUnique.mockResolvedValue(eligibleOrder());
+    prismaMock.warrantyClaim.create.mockResolvedValue({ id: "claim_3" });
+    await POST(jsonRequest(baseClaim)); // orderId "STL-1042"
+    expect(prismaMock.order.findUnique).toHaveBeenCalledWith({
+      where: { orderNumber: 1042 },
+    });
+  });
+
+  it("still accepts a raw cuid so old orders/links keep working", async () => {
+    prismaMock.order.findUnique.mockResolvedValue(eligibleOrder());
+    prismaMock.warrantyClaim.create.mockResolvedValue({ id: "claim_4" });
+    const cuid = "clx3k9f2a0001abcd8xyz9012";
+    const res = await POST(jsonRequest({ ...baseClaim, orderId: cuid }));
+    expect(res.status).toBe(200);
+    expect(prismaMock.order.findUnique).toHaveBeenCalledWith({ where: { id: cuid } });
+  });
+
+  it("404s on an unparseable order number without hitting the DB", async () => {
+    const res = await POST(jsonRequest({ ...baseClaim, orderId: "not-an-order" }));
+    expect(res.status).toBe(404);
+    expect(prismaMock.order.findUnique).not.toHaveBeenCalled();
   });
 });

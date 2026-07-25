@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { clientKey, consumeRateLimit } from "@/lib/rateLimit";
-import { looksLikeOrderId, parseOrderNumber } from "@/lib/orderNumber";
+import { looksLikeOrderId, parseOrderNumber, formatOrderNumber } from "@/lib/orderNumber";
+import { sendEmail } from "@/lib/email";
 
 const WARRANTY_DAYS = 30;
 const MAX_PHOTOS = 5;
@@ -143,6 +144,25 @@ export async function POST(req: Request) {
     console.error("warranty claim create error", e);
     return NextResponse.json({ error: "Database unavailable." }, { status: 500 });
   }
+
+  // Notify the shop. Fire-and-forget — claim is already saved. reply_to = the
+  // customer so you can respond straight from the inbox. Photos aren't attached
+  // (they're up to 5×8MB) — review + resolve them in /admin → Warranty.
+  const esc = (s: string) =>
+    s.replace(/[&<>"]/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string,
+    );
+  sendEmail({
+    subject: `Warranty claim: ${productName} (order ${formatOrderNumber(order.orderNumber)})`,
+    replyTo: email,
+    html:
+      `<h2>New warranty claim</h2>` +
+      `<p><strong>Order:</strong> ${formatOrderNumber(order.orderNumber)}</p>` +
+      `<p><strong>Product:</strong> ${esc(productName)}</p>` +
+      `<p><strong>From:</strong> ${esc(name)} &lt;${esc(email)}&gt;${phone ? ` · ${esc(phone)}` : ""}</p>` +
+      `<p><strong>${cleanPhotos.length} photo(s)</strong> attached to the claim — view them in <a href="${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/admin">/admin → Warranty</a>.</p>` +
+      `<p style="white-space:pre-wrap">${esc(description)}</p>`,
+  }).catch((e) => console.error("warranty email failed", e));
 
   return NextResponse.json({ ok: true });
 }
